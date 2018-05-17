@@ -73,7 +73,7 @@ struct snps_softc {
  *
  * remove the if 0
 */
-#if 0
+/* #if 0 */
 #ifdef EARLY_PRINTF
 static void
 uart_snps_early_putc(int c)
@@ -81,10 +81,10 @@ uart_snps_early_putc(int c)
 	volatile uint32_t *stat;
 	volatile uint32_t *tx;
 
-#ifdef ALLWINNER_64
+/* #ifdef ALLWINNER_64 */
 	stat = (uint32_t *) (SOCDEV_VA + 0x1C2807C);
 	tx = (uint32_t *) (SOCDEV_VA + 0x1C28000);
-#endif
+/* #endif */
 #ifdef ALLWINNER_32
 	stat = (uint32_t *) (SOCDEV_VA + 0x2807C);
 	tx = (uint32_t *) (SOCDEV_VA + 0x28000);
@@ -96,7 +96,7 @@ uart_snps_early_putc(int c)
 }
 early_putc_t *early_putc = uart_snps_early_putc;
 #endif /* EARLY_PRINTF */
-#endif
+/* #endif */
 
 static kobj_method_t snps_methods[] = {
 	KOBJMETHOD(uart_probe,		ns8250_bus_probe),
