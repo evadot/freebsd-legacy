@@ -176,13 +176,17 @@ show_class_attr_string(struct class *class,
 	struct class_attribute_string class_attr_##_name = \
 		_CLASS_ATTR_STRING(_name, _mode, _str)
 
-#define	dev_err(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_warn(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_info(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
-#define	dev_notice(dev, fmt, ...)	device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_err(dev, fmt, ...)						\
+	device_printf(((const struct device *)(dev))->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_warn(dev, fmt, ...)						\
+	device_printf(((const struct device *)(dev))->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_info(dev, fmt, ...)						\
+	device_printf(((const struct device *)(dev))->bsddev, fmt, ##__VA_ARGS__)
+#define	dev_notice(dev, fmt, ...)					\
+	device_printf(((const struct device *)(dev))->bsddev, fmt, ##__VA_ARGS__)
 #define	dev_dbg(dev, fmt, ...)	do { } while (0)
 #define	dev_printk(lvl, dev, fmt, ...)					\
-	    device_printf((dev)->bsddev, fmt, ##__VA_ARGS__)
+	    device_printf(((const struct device *)(dev))->bsddev, fmt, ##__VA_ARGS__)
 
 #define	dev_err_once(dev, ...) do {		\
 	static bool __dev_err_once;		\
