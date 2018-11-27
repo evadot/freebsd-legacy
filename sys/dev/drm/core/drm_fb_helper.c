@@ -1044,8 +1044,11 @@ struct fb_info *drm_fb_helper_alloc_fbi(struct drm_fb_helper *fb_helper)
 		goto err_free_cmap;
 	}
 
-#endif
 	fb_helper->fbdev = info;
+	info->skip_vt_switch = true;
+#elif defined(__FreeBSD__)
+	fb_helper->fbdev = info;
+#endif
 
 	return info;
 
