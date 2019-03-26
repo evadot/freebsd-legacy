@@ -2014,7 +2014,6 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	int crtc_count = 0;
 	int i;
 	struct drm_fb_helper_surface_size sizes;
-	int gamma_size = 0;
 	int best_depth = 0;
 
 	memset(&sizes, 0, sizeof(struct drm_fb_helper_surface_size));
@@ -2030,7 +2029,6 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	if (preferred_bpp != sizes.surface_bpp)
 		sizes.surface_depth = sizes.surface_bpp = preferred_bpp;
 
-	/* first up get a count of crtcs now in use and new min/maxes width/heights */
 	drm_fb_helper_for_each_connector(fb_helper, i) {
 		struct drm_fb_helper_connector *fb_helper_conn = fb_helper->connector_info[i];
 		struct drm_cmdline_mode *cmdline_mode;
@@ -2110,6 +2108,7 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 		sizes.surface_depth = best_depth;
 	}
 
+	/* first up get a count of crtcs now in use and new min/maxes width/heights */
 	crtc_count = 0;
 	for (i = 0; i < fb_helper->crtc_count; i++) {
 		struct drm_display_mode *desired_mode;
@@ -2131,9 +2130,6 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 
 		x = fb_helper->crtc_info[i].x;
 		y = fb_helper->crtc_info[i].y;
-
-		if (gamma_size == 0)
-			gamma_size = fb_helper->crtc_info[i].mode_set.crtc->gamma_size;
 
 		sizes.surface_width  = max_t(u32, desired_mode->hdisplay + x, sizes.surface_width);
 		sizes.surface_height = max_t(u32, desired_mode->vdisplay + y, sizes.surface_height);
