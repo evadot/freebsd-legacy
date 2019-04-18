@@ -647,6 +647,7 @@ int drm_legacy_mmap(struct file *filp, struct vm_area_struct *vma)
 }
 EXPORT_SYMBOL(drm_legacy_mmap);
 
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
 void drm_legacy_vma_flush(struct drm_device *dev)
 {
 	struct drm_vma_entry *vma, *vma_temp;
@@ -657,4 +658,5 @@ void drm_legacy_vma_flush(struct drm_device *dev)
 		kfree(vma);
 	}
 }
+#endif
 #endif
