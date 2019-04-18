@@ -10,7 +10,8 @@
 
 #define	CONFIG_FB			1
 #define	CONFIG_DRM_FBDEV_EMULATION	1
-
+#define	CONFIG_DRM_LEGACY		0
+#define	CONFIG_DRM_VM			0
 // Overallocation of the fbdev buffer
 // Defines the fbdev buffer overallocation in percent. Default is 100.
 // Typical values for double buffering will be 200, triple buffering 300.
