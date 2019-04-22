@@ -49,9 +49,11 @@ SYSCTL_DECL(_hw_drm);
 //extern unsigned int drm_timestamp_precision;
 
 static int	   drm_name_info DRM_SYSCTL_HANDLER_ARGS;
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
 static int	   drm_vm_info DRM_SYSCTL_HANDLER_ARGS;
-static int	   drm_clients_info DRM_SYSCTL_HANDLER_ARGS;
 static int	   drm_bufs_info DRM_SYSCTL_HANDLER_ARGS;
+#endif
+static int	   drm_clients_info DRM_SYSCTL_HANDLER_ARGS;
 static int	   drm_vblank_info DRM_SYSCTL_HANDLER_ARGS;
 
 int drm_sysctl_cleanup(struct drm_device *dev);
@@ -62,9 +64,11 @@ struct drm_sysctl_list {
 	int	   (*f) DRM_SYSCTL_HANDLER_ARGS;
 } drm_sysctl_list[] = {
 	{"name",    drm_name_info},
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
 	{"vm",	    drm_vm_info},
-	{"clients", drm_clients_info},
 	{"bufs",    drm_bufs_info},
+#endif
+	{"clients", drm_clients_info},
 	{"vblank",  drm_vblank_info},
 };
 #define DRM_SYSCTL_ENTRIES (sizeof(drm_sysctl_list)/sizeof(drm_sysctl_list[0]))
@@ -236,6 +240,7 @@ done:
 	return retcode;
 }
 
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
 static int drm_vm_info DRM_SYSCTL_HANDLER_ARGS
 {
 	struct drm_device *dev = arg1;
@@ -316,7 +321,9 @@ done:
 	free(tempmaps, DRM_MEM_DRIVER);
 	return retcode;
 }
+#endif /* CONFIG_DRM_LEGACY */
 
+#if IS_ENABLED(CONFIG_DRM_LEGACY)
 static int drm_bufs_info DRM_SYSCTL_HANDLER_ARGS
 {
 	struct drm_device	 *dev = arg1;
@@ -371,6 +378,7 @@ done:
 	free(templists, DRM_MEM_DRIVER);
 	return retcode;
 }
+#endif
 
 static int drm_clients_info DRM_SYSCTL_HANDLER_ARGS
 {
