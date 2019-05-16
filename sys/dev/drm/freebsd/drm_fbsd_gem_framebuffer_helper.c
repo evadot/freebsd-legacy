@@ -53,6 +53,22 @@ static int drm_format_num_planes(uint32_t format)
 	return info ? info->num_planes : 1;
 }
 
+static int drm_format_horz_chroma_subsampling(uint32_t format)
+{
+	const struct drm_format_info *info;
+
+	info = drm_format_info(format);
+	return info ? info->hsub : 1;
+}
+
+static int drm_format_vert_chroma_subsampling(uint32_t format)
+{
+	const struct drm_format_info *info;
+
+	info = drm_format_info(format);
+	return info ? info->vsub : 1;
+}
+
 static void
 drm_gem_fb_destroy(struct drm_framebuffer *drm_fb)
 {
