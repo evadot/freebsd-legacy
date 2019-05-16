@@ -69,6 +69,15 @@ static int drm_format_vert_chroma_subsampling(uint32_t format)
 	return info ? info->vsub : 1;
 }
 
+static inline
+int drm_format_info_plane_cpp(const struct drm_format_info *info, int plane)
+{
+	if (!info || plane >= info->num_planes)
+		return 0;
+
+	return info->cpp[plane];
+}
+
 static void
 drm_gem_fb_destroy(struct drm_framebuffer *drm_fb)
 {
