@@ -45,6 +45,14 @@ __FBSDID("$FreeBSD$");
 #include <drm/drm_fb_cma_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 
+static int drm_format_num_planes(uint32_t format)
+{
+	const struct drm_format_info *info;
+
+	info = drm_format_info(format);
+	return info ? info->num_planes : 1;
+}
+
 static void
 drm_gem_fb_destroy(struct drm_framebuffer *drm_fb)
 {
