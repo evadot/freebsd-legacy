@@ -240,6 +240,8 @@ drm_gem_fb_create(struct drm_device *drm, struct drm_file *file,
 
 	nplanes = drm_format_num_planes(cmd->pixel_format);
 	for (i = 0; i < nplanes; i++) {
+		const struct drm_format_info *info;
+
 		width = cmd->width;
 		height = cmd->height;
 		if (i != 0) {
@@ -250,7 +252,8 @@ drm_gem_fb_create(struct drm_device *drm, struct drm_file *file,
 		if (gem_obj == NULL)
 			goto fail;
 
-		bpp = drm_format_plane_cpp(cmd->pixel_format, i);
+		info = drm_format_info(cmd->pixel_format);
+		bpp = drm_format_info_plane_cpp(info, i);
 		size = (height - 1) * cmd->pitches[i] +
 		    width * bpp + cmd->offsets[i];
 		if (gem_obj->size < size)
