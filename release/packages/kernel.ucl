@@ -16,7 +16,14 @@ desc = <<EOD
 %DESC%
 EOD
 scripts: {
+	pre-deinstall = <<EOD
+	/usr/sbin/kernel-select -k ${PKG_ROOTDIR}/boot/ -p backup FreeBSD-%PKGNAME%
+EOD
 	post-install = <<EOD
-	/usr/sbin/kldxref ${PKG_ROOTDIR}/boot/%KERNELDIR%
+	/usr/sbin/kernel-select -k ${PKG_ROOTDIR}/boot/ -p switch FreeBSD-%PKGNAME%
+EOD
+	post-deinstall = <<EOD
+	/usr/sbin/kernel-select cleanup
+	/usr/sbin/kernel-select -q -k ${PKG_ROOTDIR}/boot  status || /usr/sbin/kernel-select -k ${PKG_ROOTDIR}/boot switch GENERIC
 EOD
 }
