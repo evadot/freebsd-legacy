@@ -28,10 +28,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <drm/drmP.h>
+#include <linux/slab.h>
+/* FBSD: Linux header polution, we need fs.h and lockdep.h */
+#include <linux/fs.h>
+#include <linux/lockdep.h>
+
+#include <drm/drm_auth.h>
+#include <drm/drm_drv.h>
+#include <drm/drm_file.h>
+#include <drm/drm_lease.h>
+#include <drm/drm_print.h>
+
 #include "drm_internal.h"
 #include "drm_legacy.h"
-#include <drm/drm_lease.h>
 
 /**
  * DOC: master and authentication

@@ -1,5 +1,8 @@
 /* Public domain. */
 
+#ifndef _DRM_AGP_SUPPORT_
+#define	_DRM_AGP_SUPPORT_
+
 #include <dev/agp/agpvar.h>
 
 struct drm_agp_head {
@@ -16,3 +19,5 @@ drm_legacy_agp_clear(struct drm_device *dev)
 
 	return;
 }
+
+#endif

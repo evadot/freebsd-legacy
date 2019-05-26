@@ -29,9 +29,16 @@
 #include <linux/export.h>
 #include <linux/dma-buf.h>
 #include <linux/rbtree.h>
-#include <drm/drm_prime.h>
+/* FBSD: Linux header polution, we need wait.h and fs.h */
+#include <linux/wait.h>
+#include <linux/fs.h>
+#include <sys/fcntl.h>
+
+#include <drm/drm_drv.h>
+#include <drm/drm_file.h>
+#include <drm/drm_framebuffer.h>
 #include <drm/drm_gem.h>
-#include <drm/drmP.h>
+#include <drm/drm_prime.h>
 
 #include "drm_internal.h"
 

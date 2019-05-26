@@ -27,14 +27,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+
+#ifdef __FreeBSD__
+#include <drm/drmP.h>
+#endif
+
 #include <linux/compat.h>
 #include <linux/ratelimit.h>
 #include <linux/export.h>
 
-#include <drm/drmP.h>
-#include "drm_legacy.h"
-#include "drm_internal.h"
+#include <drm/drm_agpsupport.h>
+#include <drm/drm_file.h>
+#include <drm/drm_print.h>
+
 #include "drm_crtc_internal.h"
+#include "drm_internal.h"
+#include "drm_legacy.h"
 
 #ifdef __FreeBSD__
 #define compat_ptr(x)   ((void *)(unsigned long)x)
