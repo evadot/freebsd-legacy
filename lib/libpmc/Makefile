@@ -6,7 +6,7 @@ LIB=	pmc
 SRCS=	libpmc.c pmclog.c libpmc_pmu_util.c libpmc_json.cc
 INCS=	pmc.h pmclog.h pmcformat.h
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "aarch64"
 
 .if ${MACHINE_ARCH} == "aarch64"
 EVENT_ARCH="arm64"
