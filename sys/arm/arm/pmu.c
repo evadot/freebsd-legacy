@@ -181,6 +181,7 @@ pmu_attach(device_t dev)
 #ifdef FDT
 static struct ofw_compat_data compat_data[] = {
 	{"arm,armv8-pmuv3",	1},
+	{"arm,cortex-a53-pmu",	1},
 	{"arm,cortex-a17-pmu",	1},
 	{"arm,cortex-a15-pmu",	1},
 	{"arm,cortex-a12-pmu",	1},
