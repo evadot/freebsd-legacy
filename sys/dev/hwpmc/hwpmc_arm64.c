@@ -481,6 +481,7 @@ pmc_arm64_initialize()
 	struct pmc_classdep *pcd;
 	int idcode;
 	int reg;
+	u_int midr;
 
 	reg = arm64_pmcr_read();
 	arm64_npmcs = (reg & PMCR_N_MASK) >> PMCR_N_SHIFT;
@@ -498,6 +499,8 @@ pmc_arm64_initialize()
 	/* Just one class */
 	pmc_mdep = pmc_mdep_alloc(1);
 
+	midr = PCPU_GET(midr);
+	snprintf(pmc_cpuid, sizeof(pmc_cpuid), "0x%.16x", midr);
 	switch (idcode) {
 	case PMCR_IDCODE_CORTEX_A57:
 	case PMCR_IDCODE_CORTEX_A72:
