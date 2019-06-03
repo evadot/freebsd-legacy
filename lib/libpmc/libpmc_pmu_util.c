@@ -37,11 +37,12 @@
 #include <string.h>
 #include <pmc.h>
 #include <pmclog.h>
+#include <regex.h>
 #include <assert.h>
 #include <libpmcstat.h>
 #include "pmu-events/pmu-events.h"
 
-#if defined(__amd64__) || defined(__i386__)
+#if defined(__amd64__) || defined(__i386__) || defined(__aarch64__)
 struct pmu_alias {
 	const char *pa_alias;
 	const char *pa_name;
@@ -51,6 +52,7 @@ typedef enum {
 	PMU_INVALID,
 	PMU_INTEL,
 	PMU_AMD,
+	PMU_ARM,
 } pmu_mfr_t;
 
 static struct pmu_alias pmu_intel_alias_table[] = {
@@ -107,6 +109,9 @@ pmu_events_mfr(void)
 		mfr = PMU_INTEL;
 	else
 		mfr = PMU_INVALID;
+#ifdef __aarch64__
+	mfr = PMU_ARM;
+#endif
 	free(buf);
 	return (mfr);
 }
@@ -426,6 +431,7 @@ pmc_pmu_print_counter_full(const char *ev)
 	}
 }
 
+#if defined(__amd64__) || defined(__i386__)
 static int
 pmc_pmu_amd_pmcallocate(const char *event_name, struct pmc_op_pmcallocate *pm,
 	struct pmu_event_desc *ped)
@@ -518,6 +524,18 @@ pmc_pmu_intel_pmcallocate(const char *event_name, struct pmc_op_pmcallocate *pm,
 		iap->pm_iap_config |= IAP_INT;
 	return (0);
 }
+#endif
+
+#ifdef __aarch64__
+static int
+pmc_pmu_arm64_pmcallocate(const char *event_name, struct pmc_op_pmcallocate *pm,
+	struct pmu_event_desc *ped)
+{
+	pm->pm_class = PMC_CLASS_ARMV8;
+
+	return (0);
+}
+#endif
 
 int
 pmc_pmu_pmcallocate(const char *event_name, struct pmc_op_pmcallocate *pm)
@@ -545,10 +563,16 @@ pmc_pmu_pmcallocate(const char *event_name, struct pmc_op_pmcallocate *pm)
 	if (pmu_parse_event(&ped, pe->event))
 		return (ENOENT);
 
+#if defined(__amd64__) || defined(__i386__)
 	if (mfr == PMU_INTEL)
 		return (pmc_pmu_intel_pmcallocate(event_name, pm, &ped));
-	else
+	else if (mfr == PMU_AMD)
 		return (pmc_pmu_amd_pmcallocate(event_name, pm, &ped));
+#endif
+#ifdef __aarch64__
+	return (pmc_pmu_arm64_pmcallocate(event_name, pm, &ped));
+#endif
+		return (0);
 }
 
 /*
