@@ -390,8 +390,8 @@ int drm_gem_lock_reservations(struct drm_gem_object **objs, int count,
 			      struct ww_acquire_ctx *acquire_ctx);
 void drm_gem_unlock_reservations(struct drm_gem_object **objs, int count,
 				 struct ww_acquire_ctx *acquire_ctx);
-int drm_gem_dumb_map_offset(struct drm_file *file, struct drm_device *dev,
-			    u32 handle, u64 *offset);
+int drm_gem_map_offset(struct drm_file *file, struct drm_device *dev,
+		       u32 handle, u64 *offset);
 int drm_gem_dumb_destroy(struct drm_file *file,
 			 struct drm_device *dev,
 			 uint32_t handle);
