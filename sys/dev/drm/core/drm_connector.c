@@ -144,16 +144,14 @@ static void drm_connector_get_cmdline_mode(struct drm_connector *connector)
 		connector->force = mode->force;
 	}
 
-#ifdef NOTYET
 	DRM_DEBUG_KMS("cmdline mode for connector %s %s %dx%d@%dHz%s%s%s\n",
 		      connector->name,
-		      mode->name ? mode->name : "",
+		      mode->name,
 		      mode->xres, mode->yres,
 		      mode->refresh_specified ? mode->refresh : 60,
 		      mode->rb ? " reduced blanking" : "",
 		      mode->margins ? " with margins" : "",
 		      mode->interlace ?  " interlaced" : "");
-#endif
 }
 
 static void drm_connector_free(struct kref *kref)
