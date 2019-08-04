@@ -36,14 +36,6 @@ struct display_timing;
 
 /**
  * struct drm_panel_funcs - perform operations on a given panel
- * @disable: disable panel (turn off back light, etc.)
- * @unprepare: turn off panel
- * @prepare: turn on panel and perform set up
- * @enable: enable panel (turn on back light, etc.)
- * @get_modes: add modes to the connector that the panel is attached to and
- * return the number of modes added
- * @get_timings: copy display timings into the provided array and return
- * the number of display timings available
  *
  * The .prepare() function is typically called before the display controller
  * starts to transmit video data. Panel drivers can use this to turn the panel
@@ -69,11 +61,48 @@ struct display_timing;
  * the panel. This is the job of the .unprepare() function.
  */
 struct drm_panel_funcs {
-	int (*disable)(struct drm_panel *panel);
-	int (*unprepare)(struct drm_panel *panel);
-	int (*prepare)(struct drm_panel *panel);
+	/**
+	 * @prepare:
+	 *
+	 * Turn on panel and perform set up.
+	 */
+ 	int (*prepare)(struct drm_panel *panel);
+
+	/**
+	 * @enable:
+	 *
+	 * Enable panel (turn on back light, etc.).
+	 */
 	int (*enable)(struct drm_panel *panel);
-	int (*get_modes)(struct drm_panel *panel);
+
+	/**
+	 * @disable:
+	 *
+	 * Disable panel (turn off back light, etc.).
+	 */
+	int (*disable)(struct drm_panel *panel);
+
+	/**
+	 * @unprepare:
+	 *
+	 * Turn off panel.
+	 */
+	int (*unprepare)(struct drm_panel *panel);
+
+	/**
+	 * @get_modes:
+	 *
+	 * Add modes to the connector that the panel is attached to and
+	 * return the number of modes added.
+	 */
+ 	int (*get_modes)(struct drm_panel *panel);
+
+	/**
+	 * @get_timings:
+	 *
+	 * Copy display timings into the provided array and return
+	 * the number of display timings available.
+	 */
 	int (*get_timings)(struct drm_panel *panel, unsigned int num_timings,
 			   struct display_timing *timings);
 };
