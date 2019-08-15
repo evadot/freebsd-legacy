@@ -73,6 +73,9 @@ arm/allwinner/h3/h3_r_padconf.c optional	soc_allwinner_h5 fdt
 arm/allwinner/h6/h6_padconf.c optional		soc_allwinner_h6 fdt
 arm/allwinner/h6/h6_r_padconf.c optional	soc_allwinner_h6 fdt
 
+# ANX6345
+dev/iicbus/anx6345.c			optional fdt anx6345 compile-with "${DRMLIB_C}"
+
 arm/annapurna/alpine/alpine_ccu.c		optional	al_ccu fdt
 arm/annapurna/alpine/alpine_nb_service.c	optional	al_nb_service fdt
 arm/annapurna/alpine/alpine_pci.c		optional	al_pci fdt
