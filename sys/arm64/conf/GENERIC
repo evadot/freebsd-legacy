@@ -300,6 +300,9 @@ device		vt_efifb
 
 device		drmlib
 
+# Video Controllers
+device		anx6345
+
 # EVDEV support
 device		evdev			# input event device support
 options		EVDEV_SUPPORT		# evdev support in legacy drivers
