@@ -91,7 +91,10 @@ void drm_puts(struct drm_printer *p, const char *str);
 #ifdef __linux__
 void drm_print_regset32(struct drm_printer *p, struct debugfs_regset32 *regset);
 #endif
-
+void drm_print_bits(struct drm_printer *p,
+		    unsigned long value, const char *bits[],
+		    unsigned int from, unsigned int to);
+ 
 __printf(2, 0)
 /**
  * drm_vprintf - print to a &drm_printer stream
