@@ -48,7 +48,8 @@ DTS=	\
 	allwinner/sun50i-a64-pinebook.dts \
 	allwinner/sun50i-a64-sopine-baseboard.dts \
 	allwinner/sun50i-h5-orangepi-pc2.dts \
-	allwinner/sun50i-h5-nanopi-neo2.dts
+	allwinner/sun50i-h5-nanopi-neo2.dts \
+	allwinner/sun50i-h6-pine-h64.dts
 
 DTSO=	sun50i-a64-opp.dtso \
 	sun50i-a64-pwm.dtso \
