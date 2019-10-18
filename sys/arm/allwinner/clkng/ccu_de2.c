@@ -49,6 +49,8 @@ __FBSDID("$FreeBSD$");
 #include <dev/extres/clk/clk_fixed.h>
 #include <dev/extres/clk/clk_mux.h>
 
+#include <dev/extres/hwreset/hwreset.h>
+
 #include <arm/allwinner/clkng/aw_ccung.h>
 
 #include <gnu/dts/include/dt-bindings/clock/sun8i-de2.h>
@@ -95,7 +97,7 @@ NM_CLK(mixer1_div_clk,
     4, 4, 0, 0,				/* M flags */
     0, 0,				/* mux */
     0,					/* gate */
-    AW_CLK_SCALE_CHANGE);	/* flags */
+    AW_CLK_SCALE_CHANGE);		/* flags */
 
 NM_CLK(wb_div_clk,
     CLK_WB_DIV,				/* id */
@@ -105,7 +107,7 @@ NM_CLK(wb_div_clk,
     8, 4, 0, 0,				/* M flags */
     0, 0,				/* mux */
     0,					/* gate */
-    AW_CLK_SCALE_CHANGE);	/* flags */
+    AW_CLK_SCALE_CHANGE);		/* flags */
 
 static struct aw_ccung_clk de2_ccu_clks[] = {
 	{ .type = AW_CLK_NM, .clk.nm = &mixer0_div_clk},
@@ -136,8 +138,12 @@ static int
 ccu_de2_attach(device_t dev)
 {
 	struct aw_ccung_softc *sc;
+	phandle_t node;
+	clk_t mod, bus;
+	hwreset_t rst_de;
 
 	sc = device_get_softc(dev);
+	node = ofw_bus_get_node(dev);
 
 	sc->resets = de2_ccu_resets;
 	sc->nresets = nitems(de2_ccu_resets);
@@ -145,6 +151,33 @@ ccu_de2_attach(device_t dev)
 	sc->ngates = nitems(de2_ccu_gates);
 	sc->clks = de2_ccu_clks;
 	sc->nclks = nitems(de2_ccu_clks);
+
+	if (hwreset_get_by_ofw_idx(dev, node, 0, &rst_de) != 0) {
+		device_printf(dev, "Cannot get de reset\n");
+		return (ENXIO);
+	}
+	if (hwreset_deassert(rst_de) != 0) {
+		device_printf(dev, "Cannot de-assert de reset\n");
+		return (ENXIO);
+	}
+
+	if (clk_get_by_ofw_name(dev, node, "mod", &mod) != 0) {
+		device_printf(dev, "Cannot get mod clock\n");
+		return (ENXIO);
+	}
+	if (clk_enable(mod) != 0) {
+		device_printf(dev, "Cannot enable mod clock\n");
+		return (ENXIO);
+	}
+
+	if (clk_get_by_ofw_name(dev, node, "bus", &bus) != 0) {
+		device_printf(dev, "Cannot get bus clock\n");
+		return (ENXIO);
+	}
+	if (clk_enable(bus) != 0) {
+		device_printf(dev, "Cannot enable bus clock\n");
+		return (ENXIO);
+	}
 
 	return (aw_ccung_attach(dev));
 }
