@@ -302,6 +302,10 @@ device		drmlib
 
 # Video Controllers
 device		anx6345
+device		aw_de2
+
+# DRM Bridges
+device		dw_hdmi
 
 # EVDEV support
 device		evdev			# input event device support
