@@ -1217,7 +1217,7 @@ void drm_atomic_helper_commit_modeset_disables(struct drm_device *dev,
 }
 EXPORT_SYMBOL(drm_atomic_helper_commit_modeset_disables);
 
-#ifdef notyet
+#ifdef __linux__
 static void drm_atomic_helper_commit_writebacks(struct drm_device *dev,
 						struct drm_atomic_state *old_state)
 {
@@ -1238,8 +1238,13 @@ static void drm_atomic_helper_commit_writebacks(struct drm_device *dev,
 		}
 	}
 }
-#endif
+#elif defined(__FreeBSD__)
+static void drm_atomic_helper_commit_writebacks(struct drm_device *dev,
+						struct drm_atomic_state *old_state)
+{
 
+}
+#endif
 /**
  * drm_atomic_helper_commit_modeset_enables - modeset commit to enable outputs
  * @dev: DRM device
@@ -1319,9 +1324,7 @@ void drm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 		drm_bridge_enable(encoder->bridge);
 	}
 
-#ifdef notyet
 	drm_atomic_helper_commit_writebacks(dev, old_state);
-#endif
 }
 EXPORT_SYMBOL(drm_atomic_helper_commit_modeset_enables);
 
