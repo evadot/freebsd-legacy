@@ -438,9 +438,7 @@ static void drm_legacy_dev_reinit(struct drm_device *dev)
 
 	mutex_lock(&dev->struct_mutex);
 
-#ifdef __linux__
 	drm_legacy_agp_clear(dev);
-#endif
 
 	drm_legacy_sg_cleanup(dev);
 	drm_legacy_vma_flush(dev);
@@ -468,9 +466,7 @@ void drm_lastclose(struct drm_device * dev)
 	if (drm_core_check_feature(dev, DRIVER_LEGACY))
 		drm_legacy_dev_reinit(dev);
 
-#ifdef __linux__
 	drm_client_dev_restore(dev);
-#endif
 }
 
 /**

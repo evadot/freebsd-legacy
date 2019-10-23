@@ -396,17 +396,14 @@ static void drm_atomic_crtc_print_state(struct drm_printer *p,
 static int drm_atomic_connector_check(struct drm_connector *connector,
 		struct drm_connector_state *state)
 {
-//#ifdef notyet
 	struct drm_crtc_state *crtc_state;
 	struct drm_writeback_job *writeback_job = state->writeback_job;
-//#endif
 	const struct drm_display_info *info = &connector->display_info;
 
 	state->max_bpc = info->bpc ? info->bpc : 8;
 	if (connector->max_bpc_property)
 		state->max_bpc = min(state->max_bpc, state->max_requested_bpc);
 
-//#ifdef notyet
 	if ((connector->connector_type != DRM_MODE_CONNECTOR_WRITEBACK) || !writeback_job)
 		return 0;
 
@@ -432,7 +429,6 @@ static int drm_atomic_connector_check(struct drm_connector *connector,
 				 connector->base.id, connector->name);
 		return -EINVAL;
 	}
-//#endif
 
 	return 0;
 }
@@ -886,11 +882,9 @@ static void drm_atomic_connector_print_state(struct drm_printer *p,
 	drm_printf(p, "connector[%u]: %s\n", connector->base.id, connector->name);
 	drm_printf(p, "\tcrtc=%s\n", state->crtc ? state->crtc->name : "(null)");
 
-//#ifdef notyet
 	if (connector->connector_type == DRM_MODE_CONNECTOR_WRITEBACK)
 		if (state->writeback_job && state->writeback_job->fb)
 			drm_printf(p, "\tfb=%d\n", state->writeback_job->fb->base.id);
-//#endif
 
 	if (connector->funcs->atomic_print_state)
 		connector->funcs->atomic_print_state(p, state);

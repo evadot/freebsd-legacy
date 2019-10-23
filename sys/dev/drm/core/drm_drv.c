@@ -885,9 +885,7 @@ void drm_dev_unregister(struct drm_device *dev)
 
 	dev->registered = false;
 
-#ifdef __linux__
 	drm_client_dev_unregister(dev);
-#endif
 
 	if (drm_core_check_feature(dev, DRIVER_MODESET))
 		drm_modeset_unregister_all(dev);
