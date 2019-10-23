@@ -29,14 +29,12 @@
  */
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#ifdef __linux__
 #include <linux/console.h>
 #include <linux/dma-buf.h>
 #include <linux/kernel.h>
 #include <linux/sysrq.h>
 #include <linux/slab.h>
 #include <linux/module.h>
-#endif
 #include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_fb_helper.h>
@@ -3345,6 +3343,7 @@ int drm_fb_helper_generic_probe(struct drm_fb_helper *fb_helper,
 			page_to_phys(virt_to_page(fbi->screen_buffer));
 #endif
 	strcpy(fbi->fix.id, "DRM emulated");
+
 	drm_fb_helper_fill_fix(fbi, fb->pitches[0], fb->format->depth);
 	drm_fb_helper_fill_var(fbi, fb_helper, sizes->fb_width, sizes->fb_height);
 

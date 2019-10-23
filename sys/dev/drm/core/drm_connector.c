@@ -23,7 +23,7 @@
 /* Due to header polution in Linux we need those files included */
 #ifdef __FreeBSD__
 #include <linux/refcount.h>
-#include <drm/drmP.h>
+#include <linux/lockdep.h>
 #endif
 #include <drm/drm_connector.h>
 #include <drm/drm_edid.h>
