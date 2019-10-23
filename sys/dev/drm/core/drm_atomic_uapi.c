@@ -371,7 +371,7 @@ static int set_out_fence_for_connector(struct drm_atomic_state *state,
 	return 0;
 }
 
-#ifdef notyet
+#ifdef __linux__
 static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
 					       struct drm_connector *connector)
 {
@@ -382,6 +382,13 @@ static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
 	state->connectors[index].out_fence_ptr = NULL;
 
 	return fence_ptr;
+}
+#elif defined(__FreeBSD__)
+static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
+					       struct drm_connector *connector)
+{
+
+	return (NULL);
 }
 #endif
 
@@ -649,7 +656,7 @@ drm_atomic_plane_get_property(struct drm_plane *plane,
 	return 0;
 }
 
-#ifdef notyet
+#ifdef __linux__
 static struct drm_writeback_job *
 drm_atomic_get_writeback_job(struct drm_connector_state *conn_state)
 {
@@ -681,6 +688,21 @@ static int drm_atomic_set_writeback_fb_for_connector(
 				 conn_state);
 
 	return 0;
+}
+#elif defined(__FreeBSD__)
+static struct drm_writeback_job *
+drm_atomic_get_writeback_job(struct drm_connector_state *conn_state)
+{
+
+	return (NULL);
+}
+
+static int drm_atomic_set_writeback_fb_for_connector(
+		struct drm_connector_state *conn_state,
+		struct drm_framebuffer *fb)
+{
+
+	return (0);
 }
 #endif
 
@@ -751,13 +773,11 @@ static int drm_atomic_connector_set_property(struct drm_connector *connector,
 		}
 		state->content_protection = val;
 	} else if (property == config->writeback_fb_id_property) {
-#ifdef notyet
 		struct drm_framebuffer *fb = drm_framebuffer_lookup(dev, NULL, val);
 		int ret = drm_atomic_set_writeback_fb_for_connector(state, fb);
 		if (fb)
 			drm_framebuffer_put(fb);
 		return ret;
-#endif
 	} else if (property == config->writeback_out_fence_ptr_property) {
 		s32 __user *fence_ptr = u64_to_user_ptr(val);
 
@@ -1095,10 +1115,8 @@ static int prepare_signaling(struct drm_device *dev,
 {
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *crtc_state;
-#ifdef notyet
 	struct drm_connector *conn;
 	struct drm_connector_state *conn_state;
-#endif
 	int i, c = 0, ret;
 
 	if (arg->flags & DRM_MODE_ATOMIC_TEST_ONLY)
@@ -1164,7 +1182,6 @@ static int prepare_signaling(struct drm_device *dev,
 		c++;
 	}
 
-#ifdef notyet
 	for_each_new_connector_in_state(state, conn, conn_state, i) {
 		struct drm_writeback_connector *wb_conn;
 		struct drm_writeback_job *job;
@@ -1203,7 +1220,6 @@ static int prepare_signaling(struct drm_device *dev,
 
 		job->out_fence = fence;
 	}
-#endif
 
 	/*
 	 * Having this flag means user mode pends on event which will never
