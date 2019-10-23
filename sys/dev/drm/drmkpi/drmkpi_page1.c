@@ -159,7 +159,7 @@ retry:
 			page = vm_page_lookup(devobj, i);
 			if (page == NULL)
 				continue;
-			if (vm_page_sleep_if_busy(page, "linuxkpi"))
+			if (!vm_page_busy_acquire(page, VM_ALLOC_WAITFAIL))
 				goto retry;
 			cdev_pager_free_page(devobj, page);
 		}
