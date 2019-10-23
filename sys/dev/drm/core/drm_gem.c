@@ -37,9 +37,7 @@
 #include <linux/shmem_fs.h>
 #include <linux/dma-buf.h>
 #include <linux/mem_encrypt.h>
-#ifdef __linux__
 #include <linux/pagevec.h>
-#endif
 #include <drm/drmP.h>
 #include <drm/drm_vma_manager.h>
 #include <drm/drm_gem.h>
