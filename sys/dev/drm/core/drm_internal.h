@@ -97,7 +97,11 @@ extern struct class *drm_class;
 
 int drm_sysfs_init(void);
 void drm_sysfs_destroy(void);
+#ifdef __linux__
 struct device *drm_sysfs_minor_alloc(struct drm_minor *minor);
+#elif defined(__FreeBSD__)
+struct cdev *drm_sysfs_minor_alloc(struct drm_minor *minor);
+#endif
 int drm_sysfs_connector_add(struct drm_connector *connector);
 void drm_sysfs_connector_remove(struct drm_connector *connector);
 

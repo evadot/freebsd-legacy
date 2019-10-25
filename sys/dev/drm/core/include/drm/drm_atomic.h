@@ -397,7 +397,7 @@ static inline void drm_crtc_commit_put(struct drm_crtc_commit *commit)
 	kref_put(&commit->ref, __drm_crtc_commit_free);
 }
 
-struct drm_atomic_state *
+struct drm_atomic_state * __must_check
 drm_atomic_state_alloc(struct drm_device *dev);
 void drm_atomic_state_clear(struct drm_atomic_state *state);
 
@@ -428,18 +428,18 @@ static inline void drm_atomic_state_put(struct drm_atomic_state *state)
 	kref_put(&state->ref, __drm_atomic_state_free);
 }
 
-int 
+int  __must_check
 drm_atomic_state_init(struct drm_device *dev, struct drm_atomic_state *state);
 void drm_atomic_state_default_clear(struct drm_atomic_state *state);
 void drm_atomic_state_default_release(struct drm_atomic_state *state);
 
-struct drm_crtc_state *
+struct drm_crtc_state * __must_check
 drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 			  struct drm_crtc *crtc);
-struct drm_plane_state *
+struct drm_plane_state * __must_check
 drm_atomic_get_plane_state(struct drm_atomic_state *state,
 			   struct drm_plane *plane);
-struct drm_connector_state *
+struct drm_connector_state * __must_check
 drm_atomic_get_connector_state(struct drm_atomic_state *state,
 			       struct drm_connector *connector);
 
@@ -449,7 +449,7 @@ void drm_atomic_private_obj_init(struct drm_device *dev,
 				 const struct drm_private_state_funcs *funcs);
 void drm_atomic_private_obj_fini(struct drm_private_obj *obj);
 
-struct drm_private_state *
+struct drm_private_state * __must_check
 drm_atomic_get_private_obj_state(struct drm_atomic_state *state,
 				 struct drm_private_obj *obj);
 
@@ -647,16 +647,16 @@ __drm_atomic_get_current_plane_state(struct drm_atomic_state *state,
 	return plane->state;
 }
 
-int
+int __must_check
 drm_atomic_add_affected_connectors(struct drm_atomic_state *state,
 				   struct drm_crtc *crtc);
-int
+int __must_check
 drm_atomic_add_affected_planes(struct drm_atomic_state *state,
 			       struct drm_crtc *crtc);
 
-int drm_atomic_check_only(struct drm_atomic_state *state);
-int drm_atomic_commit(struct drm_atomic_state *state);
-int drm_atomic_nonblocking_commit(struct drm_atomic_state *state);
+int __must_check drm_atomic_check_only(struct drm_atomic_state *state);
+int __must_check drm_atomic_commit(struct drm_atomic_state *state);
+int __must_check drm_atomic_nonblocking_commit(struct drm_atomic_state *state);
 
 void drm_state_dump(struct drm_device *dev, struct drm_printer *p);
 

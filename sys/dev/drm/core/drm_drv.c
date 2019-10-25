@@ -133,23 +133,19 @@ static int drm_minor_alloc(struct drm_device *dev, unsigned int type)
 
 	minor->index = r;
 
-#ifdef __linux__
 	minor->kdev = drm_sysfs_minor_alloc(minor);
 	if (IS_ERR(minor->kdev)) {
 		r = PTR_ERR(minor->kdev);
 		goto err_index;
 	}
-#endif
 
 	*drm_minor_get_slot(dev, type) = minor;
 	return 0;
 
-#ifdef __linux__
 err_index:
 	spin_lock_irqsave(&drm_minor_lock, flags);
 	idr_remove(&drm_minors_idr, minor->index);
 	spin_unlock_irqrestore(&drm_minor_lock, flags);
-#endif
 err_free:
 	kfree(minor);
 	return r;
@@ -165,9 +161,7 @@ static void drm_minor_free(struct drm_device *dev, unsigned int type)
 	if (!minor)
 		return;
 
-#ifdef __linux__
 	put_device(minor->kdev);
-#endif
 
 	spin_lock_irqsave(&drm_minor_lock, flags);
 	idr_remove(&drm_minors_idr, minor->index);
@@ -197,13 +191,11 @@ static int drm_minor_register(struct drm_device *dev, unsigned int type)
 
 #ifdef __linux__
 	ret = device_add(minor->kdev);
-	if (ret)
-		goto err_debugfs;
 #elif defined(__FreeBSD__)
 	ret = drm_fbsd_cdev_create(minor);
+#endif
 	if (ret)
 		goto err_debugfs;
-#endif
 
 	/* replace NULL with @minor so lookups will succeed from now on */
 	spin_lock_irqsave(&drm_minor_lock, flags);
@@ -224,14 +216,8 @@ static void drm_minor_unregister(struct drm_device *dev, unsigned int type)
 	unsigned long flags;
 
 	minor = *drm_minor_get_slot(dev, type);
-
-#ifdef __linux__
 	if (!minor || !device_is_registered(minor->kdev))
 		return;
-#elif defined(__FreeBSD__)
-	if (!minor)
-		return;
-#endif
 
 	/* replace @minor with NULL so lookups will fail from now on */
 	spin_lock_irqsave(&drm_minor_lock, flags);

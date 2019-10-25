@@ -870,8 +870,8 @@ long drm_ioctl(struct file *filp,
 		  (long)old_encode_dev(file_priv->minor->kdev->devt),
 		  file_priv->authenticated, ioctl->name);
 #else
-	/* printf("%s: pid=%d, auth=%d, %s\n", __func__, task_pid_nr(current), */
-	/*        file_priv->authenticated, ioctl->name); */
+	DRM_DEBUG("%s: pid=%d, auth=%d, %s\n", __func__, task_pid_nr(current),
+	        file_priv->authenticated, ioctl->name);
 #endif
 
 	/* Do not trust userspace, use our own definition */
@@ -893,6 +893,7 @@ long drm_ioctl(struct file *filp,
 		}
 	}
 
+// Some weird stuff is happening in copy_from_user
 #ifdef __linux__
 	if (copy_from_user(kdata, (void __user *)arg, in_size) != 0) {
 		retcode = -EFAULT;

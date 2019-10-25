@@ -59,4 +59,8 @@ char *kasprintf(gfp_t, const char *, ...);
 #define dev_warn(dev, ...) device_printf(dev, ##__VA_ARGS__)
 #define dev_info(dev, ...) device_printf(dev, ##__VA_ARGS__)
 #define dev_printk(level, dev, ...) device_printf(dev, ##__VA_ARGS__)
+
+#define	device_is_registered(dev)	0
+#define	put_device(dev)
+
 #endif	/* _LINUX_DEVICE_H_ */
