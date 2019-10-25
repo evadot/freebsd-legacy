@@ -8,7 +8,7 @@
 #include <drm/drmP.h>
 #include "../../drm_internal.h"
 
-struct device *
+struct cdev *
 drm_sysfs_minor_alloc(struct drm_minor *minor)
 {
 	return (void *)0xDEADBEAF;
