@@ -971,12 +971,15 @@ static const struct file_operations drm_stub_fops = {
 	.open = drm_stub_open,
 	.llseek = noop_llseek,
 };
+#endif
 
 static void drm_core_exit(void)
 {
+#ifdef __linux__
 	unregister_chrdev(DRM_MAJOR, "drm");
 	debugfs_remove(drm_debugfs_root);
 	drm_sysfs_destroy();
+#endif
 	idr_destroy(&drm_minors_idr);
 	drm_connector_ida_destroy();
 }
@@ -988,6 +991,7 @@ static int __init drm_core_init(void)
 	drm_connector_ida_init();
 	idr_init(&drm_minors_idr);
 
+#ifdef __linux__
 	ret = drm_sysfs_init();
 	if (ret < 0) {
 		DRM_ERROR("Cannot create DRM class: %d\n", ret);
@@ -1004,47 +1008,19 @@ static int __init drm_core_init(void)
 	ret = register_chrdev(DRM_MAJOR, "drm", &drm_stub_fops);
 	if (ret < 0)
 		goto error;
-
-	drm_core_init_complete = true;
-
-	DRM_DEBUG("Initialized\n");
-	return 0;
-
-error:
-	drm_core_exit();
-	return ret;
-}
-#elif defined(__FreeBSD__)
-static void drm_core_exit(void)
-{
-	idr_destroy(&drm_minors_idr);
-	drm_connector_ida_destroy();
-}
-
-static int __init drm_core_init(void)
-{
-	int ret;
-
-	drm_connector_ida_init();
-	idr_init(&drm_minors_idr);
-
-	ret = 0;
-	if (ret != 0) {
-		DRM_ERROR("Failed to create hw.dri sysctl entry: %d\n",
-		    ret);
-		goto error;
-	}
-
-	drm_core_init_complete = true;
-
-	DRM_DEBUG("Initialized\n");
-	return 0;
-
-error:
-	drm_core_exit();
-	return ret;
-}
 #endif
+
+	drm_core_init_complete = true;
+
+	DRM_DEBUG("Initialized\n");
+	return 0;
+
+#ifdef __linux__
+error:
+#endif
+	drm_core_exit();
+	return ret;
+}
 
 module_init(drm_core_init);
 module_exit(drm_core_exit);

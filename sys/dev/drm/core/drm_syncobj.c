@@ -165,12 +165,10 @@ EXPORT_SYMBOL(drm_syncobj_replace_fence);
  */
 static void drm_syncobj_assign_null_handle(struct drm_syncobj *syncobj)
 {
-#ifdef notyet
 	struct dma_fence *fence = dma_fence_get_stub();
 
 	drm_syncobj_replace_fence(syncobj, fence);
 	dma_fence_put(fence);
-#endif
 }
 
 /**
@@ -334,12 +332,7 @@ static int drm_syncobj_file_release(struct inode *inode, struct file *file)
 	drm_syncobj_put(syncobj);
 	return 0;
 }
-
-static const struct file_operations drm_syncobj_file_fops = {
-	.release = drm_syncobj_file_release,
-};
-
-#else
+#elif defined (__FreeBSD__)
 static int drm_syncobj_file_close(struct file *file, struct thread *td)
 {
 	struct drm_syncobj *syncobj = file->f_data;
@@ -347,11 +340,16 @@ static int drm_syncobj_file_close(struct file *file, struct thread *td)
 	drm_syncobj_put(syncobj);
 	return 0;
 }
+#endif
 
+#ifdef __linux__
+static const struct file_operations drm_syncobj_file_fops = {
+	.release = drm_syncobj_file_release,
+};
+#elif defined(__FreeBSD__)
 static struct fileops drm_syncobj_file_fops = {
 	.fo_close = drm_syncobj_file_close,
 };
-
 #endif
 
 /**
