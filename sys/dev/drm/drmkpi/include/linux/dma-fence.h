@@ -139,6 +139,7 @@ long	dma_fence_default_wait(struct dma_fence *, bool, long);
 long	dma_fence_wait(struct dma_fence *, bool);
 long	dma_fence_wait_any_timeout(struct dma_fence **, uint32_t, bool, long);
 long	dma_fence_wait_timeout(struct dma_fence *, bool, long);
+struct dma_fence *dma_fence_get_stub(void);
 
 static inline void
 DMA_FENCE_TRACE(struct dma_fence *f, const char *fmt, ...)

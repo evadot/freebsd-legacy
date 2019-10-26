@@ -371,7 +371,6 @@ static int set_out_fence_for_connector(struct drm_atomic_state *state,
 	return 0;
 }
 
-#ifdef __linux__
 static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
 					       struct drm_connector *connector)
 {
@@ -383,14 +382,6 @@ static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
 
 	return fence_ptr;
 }
-#elif defined(__FreeBSD__)
-static s32 __user *get_out_fence_for_connector(struct drm_atomic_state *state,
-					       struct drm_connector *connector)
-{
-
-	return (NULL);
-}
-#endif
 
 static int
 drm_atomic_replace_property_blob_from_id(struct drm_device *dev,
@@ -656,7 +647,6 @@ drm_atomic_plane_get_property(struct drm_plane *plane,
 	return 0;
 }
 
-#ifdef __linux__
 static struct drm_writeback_job *
 drm_atomic_get_writeback_job(struct drm_connector_state *conn_state)
 {
@@ -689,22 +679,6 @@ static int drm_atomic_set_writeback_fb_for_connector(
 
 	return 0;
 }
-#elif defined(__FreeBSD__)
-static struct drm_writeback_job *
-drm_atomic_get_writeback_job(struct drm_connector_state *conn_state)
-{
-
-	return (NULL);
-}
-
-static int drm_atomic_set_writeback_fb_for_connector(
-		struct drm_connector_state *conn_state,
-		struct drm_framebuffer *fb)
-{
-
-	return (0);
-}
-#endif
 
 static int drm_atomic_connector_set_property(struct drm_connector *connector,
 		struct drm_connector_state *state, struct drm_property *property,
