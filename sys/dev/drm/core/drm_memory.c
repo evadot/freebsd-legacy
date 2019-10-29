@@ -153,9 +153,9 @@ void drm_legacy_ioremapfree(struct drm_local_map *map, struct drm_device *dev)
 }
 EXPORT_SYMBOL(drm_legacy_ioremapfree);
 
+#ifdef __linux__
 bool drm_need_swiotlb(int dma_bits)
 {
-#ifdef __linux__
 	struct resource *tmp;
 	resource_size_t max_iomem = 0;
 
@@ -183,10 +183,6 @@ bool drm_need_swiotlb(int dma_bits)
 	}
 
 	return max_iomem > ((u64)1 << dma_bits);
-#else
-	// Only used in combination with CONFIG_SWIOTLB in v4.17
-	// BSDFIXME: Let's say we can dma all physical memory...
-	return 0xFFFFFFFFFFFFFFFF;
-#endif
 }
 EXPORT_SYMBOL(drm_need_swiotlb);
+#endif /* __linux__ */
