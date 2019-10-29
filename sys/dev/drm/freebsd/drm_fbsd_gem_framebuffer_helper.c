@@ -182,10 +182,7 @@ drm_fb_cma_probe(struct drm_fb_helper *helper,
 	info->fb_pbase = fb->planes[0]->pbase;
 	info->fb_size = size;
 	info->fb_bpp = sizes->surface_bpp;
-	drm_fb_helper_fill_fix(info, fb->drm_fb.pitches[0],
-	    fb->drm_fb.format->depth);
-	drm_fb_helper_fill_var(info, helper, fb->drm_fb.width,
-	    fb->drm_fb.height);
+	drm_fb_helper_fill_info(info, helper, sizes);
 
 	drm_dev->mode_config.fb_base =  bo->pbase;
 
