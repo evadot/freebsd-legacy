@@ -20,3 +20,7 @@ drm_writeback_get_out_fence(struct drm_writeback_connector *wb_connector)
 
 	return (NULL);
 }
+
+#define	drm_writeback_prepare_job(wb)	0
+#define	drm_writeback_cleanup_job(wb)
+#define	drm_writeback_set_fb(conn, fb)	0
