@@ -62,5 +62,8 @@ char *kasprintf(gfp_t, const char *, ...);
 
 #define	device_is_registered(dev)	0
 #define	put_device(dev)
+#define	get_device(dev)	dev
+
+#define	devm_add_action(parent, func, dev)	0
 
 #endif	/* _LINUX_DEVICE_H_ */
