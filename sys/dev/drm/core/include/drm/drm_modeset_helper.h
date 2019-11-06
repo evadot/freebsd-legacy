@@ -23,7 +23,6 @@
 #ifndef __DRM_KMS_HELPER_H__
 #define __DRM_KMS_HELPER_H__
 
-#include <drm/drmP.h>
 struct drm_crtc;
 struct drm_crtc_funcs;
 struct drm_device;
