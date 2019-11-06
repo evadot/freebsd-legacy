@@ -100,10 +100,4 @@ struct pci_controller;
  * Work is ongoing to remove drmP.h includes from existing files
  */
 
-#ifdef __FreeBSD__
-struct fb_fillrect;
-struct fb_copyarea;
-struct fb_image;
-#endif
-
 #endif
