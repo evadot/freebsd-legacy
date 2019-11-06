@@ -47,7 +47,6 @@ __FBSDID("$FreeBSD$");
 
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_gem.h>
-
 #include <drm/drm_gem_cma_helper.h>
 
 static int
