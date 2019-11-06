@@ -28,25 +28,26 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef __linux__
-#include <drm/drm_ioctl.h>
-#include <drm/drmP.h>
-#elif defined(__FreeBSD__)
-// drmP.h must be the first to include because of file -> linux_file definition
-#include <drm/drmP.h>
-#include <drm/drm_ioctl.h>
-#endif
-#include <drm/drm_auth.h>
-#include "drm_legacy.h"
-#include "drm_internal.h"
-#include "drm_crtc_internal.h"
+/* FBSD: Linux header polution, we need fs.h and ioctl.h */
+#include <linux/fs.h>
+#include <linux/ioctl.h>
 
-#include <linux/pci.h>
 #include <linux/export.h>
 #include <linux/nospec.h>
-#ifdef __FreeBSD__
-#include <linux/ioctl.h>
-#endif
+#include <linux/pci.h>
+#include <linux/uaccess.h>
+
+#include <drm/drm_agpsupport.h>
+#include <drm/drm_auth.h>
+#include <drm/drm_crtc.h>
+#include <drm/drm_drv.h>
+#include <drm/drm_file.h>
+#include <drm/drm_ioctl.h>
+#include <drm/drm_print.h>
+
+#include "drm_crtc_internal.h"
+#include "drm_internal.h"
+#include "drm_legacy.h"
 
 /**
  * DOC: getunique and setversion story

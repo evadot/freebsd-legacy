@@ -30,4 +30,8 @@ int fb_get_options(const char *name, char **option);
 struct fb_info *framebuffer_alloc(size_t size, struct device *dev);
 void framebuffer_release(struct fb_info *info);
 
+struct fb_fillrect;
+struct fb_copyarea;
+struct fb_image;
+
 #endif /* __LINUX_FB_H_ */

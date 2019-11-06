@@ -29,7 +29,9 @@
 #ifndef DRM_ATOMIC_UAPI_H_
 #define DRM_ATOMIC_UAPI_H_
 
-#include <drm/drmP.h>
+/* FBSD: Needed for __must_check */
+#include <linux/compiler.h>
+
 struct drm_crtc_state;
 struct drm_display_mode;
 struct drm_property_blob;

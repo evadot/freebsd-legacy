@@ -28,9 +28,9 @@
  * IN THE SOFTWARE.
  */
 
-#ifdef __FreeBSD__
-#include <drm/drmP.h>
-#endif
+/* FBSD: Linux header polution, we need wait.h and fs.h */
+#include <linux/fs.h>
+#include <linux/wait.h>
 
 #include <linux/compat.h>
 #include <linux/ratelimit.h>

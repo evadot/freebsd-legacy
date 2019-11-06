@@ -32,12 +32,6 @@
 #include <linux/export.h>
 #include <linux/moduleparam.h>
 
-#ifdef __FreeBSD__
-struct fb_fillrect;
-struct fb_copyarea;
-struct fb_image;
-#endif
-
 #include <drm/drm_client.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_edid.h>
