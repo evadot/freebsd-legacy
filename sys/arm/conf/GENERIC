@@ -243,6 +243,14 @@ device		videomode
 device		hdmi
 device		vchiq
 
+
+# DRM
+device		drmlib
+device		aw_de2
+
+# DRM Bridges
+device		dw_hdmi
+
 # Pinmux
 device		fdt_pinctrl
 
