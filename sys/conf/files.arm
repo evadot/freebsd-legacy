@@ -185,6 +185,7 @@ dev/drm/allwinner/aw_de2_tcon.c		optional drmlib fdt aw_de2 compile-with "${DRML
 dev/drm/allwinner/aw_de2_hdmi_phy.c	optional drmlib fdt aw_de2 compile-with "${DRMLIB_C}"
 dev/drm/allwinner/aw_de2_mixer_if.m	optional drmlib fdt aw_de2
 dev/drm/allwinner/aw_de2_tcon_if.m	optional drmlib fdt aw_de2
+arm/allwinner/clkng/ccu_de2.c		optional drmlib fdt aw_de2
 
 # Synopsis DesignWare HDMI Controller
 dev/drm/bridges/dw_hdmi/aw_de2_dw_hdmi.c	optional drmlib fdt dw_hdmi aw_de2 compile-with "${DRMLIB_C}"
