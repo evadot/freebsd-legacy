@@ -34,4 +34,9 @@ struct fb_fillrect;
 struct fb_copyarea;
 struct fb_image;
 
+struct vt_kms_softc {
+	struct drm_fb_helper    *fb_helper;
+	struct task              fb_mode_task;
+};
+
 #endif /* __LINUX_FB_H_ */
