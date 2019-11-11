@@ -19,13 +19,13 @@
 # Which version of config(8) is required.
 %VERSREQ=	600013
 
-DRMLIB_INCLUDES+= -I${S}/dev/drm/include
-DRMLIB_INCLUDES+= -I${S}/dev/drm/include/uapi
+DRMLIB_INCLUDES+= -I${S}/dev/drm/core/include
+DRMLIB_INCLUDES+= -I${S}/dev/drm/core/include/uapi
 DRMLIB_INCLUDES+= -I${S}/dev/drm/drmkpi/gpl/include
 DRMLIB_INCLUDES+= -I${S}/dev/drm/drmkpi/include/
 
 DRMLIB_CFLAGS=	${CFLAGS} ${DRMLIB_INCLUDES}
-DRMLIB_CFLAGS+=	-include ${S}/dev/drm/drmkpi/bsd/include/drm/drm_os_freebsd.h
+DRMLIB_CFLAGS+=	-include ${S}/dev/drm/drmkpi/include/drm/drm_os_freebsd.h
 DRMLIB_CFLAGS+= '-DKBUILD_MODNAME="DRMv5.1"'
 DRMLIB_CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -Wno-missing-prototypes
 # -Wno-missing-prototypes -Wno-unused-variable-Wno-incompatible-pointer-types
