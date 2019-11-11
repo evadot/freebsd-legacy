@@ -635,7 +635,6 @@ int drm_fb_helper_restore_fbdev_mode_unlocked(struct drm_fb_helper *fb_helper)
 }
 EXPORT_SYMBOL(drm_fb_helper_restore_fbdev_mode_unlocked);
 
-#ifdef __linux__
 #ifdef CONFIG_MAGIC_SYSRQ
 /*
  * restore fbcon display for all kms driver's using this helper, used for sysrq
@@ -684,10 +683,7 @@ static struct sysrq_key_op sysrq_drm_fb_helper_restore_op = {
 	.help_msg = "force-fb(V)",
 	.action_msg = "Restore framebuffer console",
 };
-#else
-static struct sysrq_key_op sysrq_drm_fb_helper_restore_op = { };
 #endif
-#endif /* __linux__ */
 
 static void dpms_legacy(struct drm_fb_helper *fb_helper, int dpms_mode)
 {
