@@ -19,7 +19,7 @@ struct llist_head {
 static inline struct llist_node *
 llist_del_all(struct llist_head *head)
 {
-	return (struct llist_node *)atomic_swap_ptr((uint64_t *)&head->first, (uint64_t)NULL);
+	return (struct llist_node *)atomic_swap_ptr((uintptr_t *)&head->first, (uint64_t)NULL);
 }
 
 static inline struct llist_node *
@@ -32,7 +32,7 @@ llist_del_first(struct llist_head *head)
 		if (first == NULL)
 			return NULL;
 		next = first->next;
-	} while (atomic_fcmpset_ptr((uint64_t *)&head->first, (uint64_t *)first, (uint64_t)next) != 0);
+	} while (atomic_fcmpset_ptr((uintptr_t *)&head->first, (uintptr_t *)first, (uint64_t)next) != 0);
 
 	return first;
 }
@@ -44,7 +44,7 @@ llist_add(struct llist_node *new, struct llist_head *head)
 
 	do {
 		new->next = first = head->first;
-	} while (atomic_fcmpset_ptr((uint64_t *)&head->first, (uint64_t *)first, (uint64_t)new) != 0);
+	} while (atomic_fcmpset_ptr((uintptr_t *)&head->first, (uintptr_t *)first, (uint64_t)new) != 0);
 
 	return (first == NULL);
 }
