@@ -39,12 +39,7 @@
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <linux/types.h>
-#include <linux/idr.h>
 #include <linux/wait.h>
-#include <linux/semaphore.h>
-#include <linux/shrinker.h>
-#include <linux/spinlock.h>
-#include <linux/dcache.h>
 
 #define	S_IRUGO	(S_IRUSR | S_IRGRP | S_IROTH)
 #define	S_IWUGO	(S_IWUSR | S_IWGRP | S_IWOTH)

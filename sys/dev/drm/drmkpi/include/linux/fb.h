@@ -1,3 +1,5 @@
+/* Public domain */
+
 #ifndef __LINUX_FB_H_
 #define __LINUX_FB_H_
 #include <sys/fbio.h>

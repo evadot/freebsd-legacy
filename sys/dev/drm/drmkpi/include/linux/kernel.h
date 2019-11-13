@@ -43,12 +43,9 @@
 #include <sys/syslog.h>
 #include <sys/time.h>
 
-#include <linux/bitops.h>
-#include <linux/compiler.h>
 #include <linux/errno.h>
 #include <linux/sched.h>
 #include <linux/types.h>
-#include <linux/jiffies.h>
 #include <linux/log2.h>
 
 #include <asm/byteorder.h>
@@ -60,9 +57,7 @@
 #include <linux/capability.h>
 #include <linux/irqflags.h>
 #include <linux/kconfig.h>
-#include <linux/kgdb.h>
 #include <linux/ktime.h>
-#include <linux/delay.h>
 
 #define KERN_CONT       ""
 #define	KERN_EMERG	"<0>"
