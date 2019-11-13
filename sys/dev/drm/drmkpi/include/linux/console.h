@@ -1,3 +1,5 @@
+/* Public domain */
+
 #ifndef __DRM_LINUX_CONSOLE_H__
 #define	__DRM_LINUX_CONSOLE_H__
 

@@ -39,7 +39,6 @@
 #include <sys/proc.h>
 
 #include <linux/fs.h>
-#include <linux/slab.h>
 
 
 static inline void

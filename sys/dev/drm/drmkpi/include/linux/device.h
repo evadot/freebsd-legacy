@@ -33,16 +33,7 @@
 
 #include <linux/err.h>
 #include <linux/types.h>
-#include <linux/kobject.h>
-#include <linux/sysfs.h>
-#include <linux/list.h>
-#include <linux/compiler.h>
-#include <linux/types.h>
 #include <linux/module.h>
-#include <linux/workqueue.h>
-#include <linux/sysfs.h>
-#include <linux/kdev_t.h>
-#include <asm/atomic.h>
 
 #include <sys/bus.h>
 
