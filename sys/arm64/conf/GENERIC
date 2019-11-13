@@ -298,7 +298,7 @@ device		kbdmux
 
 device		vt_efifb
 
-device		drmlib
+device		drm
 
 # Video Controllers
 device		anx6345
