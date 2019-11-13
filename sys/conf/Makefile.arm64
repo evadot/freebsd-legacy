@@ -20,19 +20,19 @@
 # Which version of config(8) is required.
 %VERSREQ=	600012
 
-DRMLIB_INCLUDES+= -I${S}/dev/drm/core/include
-DRMLIB_INCLUDES+= -I${S}/dev/drm/core/include/uapi
-DRMLIB_INCLUDES+= -I${S}/dev/drm/drmkpi/gpl/include
-DRMLIB_INCLUDES+= -I${S}/dev/drm/drmkpi/include/
+DRM_INCLUDES+= -I${S}/dev/drm/core/include
+DRM_INCLUDES+= -I${S}/dev/drm/core/include/uapi
+DRM_INCLUDES+= -I${S}/dev/drm/drmkpi/gpl/include
+DRM_INCLUDES+= -I${S}/dev/drm/drmkpi/include/
 
-DRMLIB_CFLAGS=	${CFLAGS} ${DRMLIB_INCLUDES}
-DRMLIB_CFLAGS+=	-include ${S}/dev/drm/drmkpi/include/drm/drm_os_freebsd.h
-DRMLIB_CFLAGS+= '-DKBUILD_MODNAME="DRMv5.1"'
-DRMLIB_CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -Wno-missing-prototypes
+DRM_CFLAGS=	${CFLAGS} ${DRM_INCLUDES}
+DRM_CFLAGS+=	-include ${S}/dev/drm/drmkpi/include/drm/drm_os_freebsd.h
+DRM_CFLAGS+= '-DKBUILD_MODNAME="DRMv5.4-rc7"'
+DRM_CFLAGS+= -Wno-cast-qual -Wno-pointer-arith -Wno-missing-prototypes
 # Complain about unsigned long long versus uint64_t, remove -Wformat for now
-DRMLIB_CFLAGS+=        -Wno-format
+DRM_CFLAGS+=        -Wno-format
 # -Wno-missing-prototypes -Wno-unused-variable-Wno-incompatible-pointer-types
-DRMLIB_C=	${CC} -c ${DRMLIB_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
+DRM_C=	${CC} -c ${DRM_CFLAGS} ${WERROR} ${PROF} ${.IMPSRC}
 
 .if !defined(S)
 S=	../../..
