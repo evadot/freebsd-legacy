@@ -317,12 +317,9 @@ drm_cdev_pager_fault(vm_object_t vm_obj, vm_ooffset_t offset, int prot,
 			page = vm_page_getfake(paddr, vm_obj->memattr);
 			VM_OBJECT_WLOCK(vm_obj);
 
-			vm_page_replace_checked(page, vm_obj,
+			vm_page_replace(page, vm_obj,
 			    (*mres)->pindex, *mres);
 
-			vm_page_lock(*mres);
-			vm_page_free(*mres);
-			vm_page_unlock(*mres);
 			*mres = page;
 		}
 		page->valid = VM_PAGE_BITS_ALL;
