@@ -9,6 +9,7 @@ SUBDIR = \
 	aw_spi \
 	aw_thermal \
 	axp81x \
-	if_awg
+	if_awg \
+	aw_de2_drm
 
 .include <bsd.subdir.mk>

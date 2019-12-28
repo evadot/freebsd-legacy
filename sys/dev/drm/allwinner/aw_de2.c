@@ -129,7 +129,8 @@ static int
 aw_de2_detach(device_t dev)
 {
 
-	return (EBUSY);
+	bus_generic_detach(dev);
+	return (0);
 }
 
 static device_method_t aw_de2_methods[] = {
@@ -148,3 +149,4 @@ static devclass_t aw_de2_devclass;
 
 EARLY_DRIVER_MODULE(aw_de2, simplebus, aw_de2_driver,
   aw_de2_devclass, 0, 0, BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_FIRST);
+MODULE_VERSION(aw_de2, 1);

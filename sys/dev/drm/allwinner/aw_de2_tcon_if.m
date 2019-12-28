@@ -33,6 +33,14 @@ HEADER {
 }
 
 #
+# Set the corresponding mixer for this tcon
+#
+METHOD int set_mixer {
+	device_t	dev;
+	device_t	mixer_dev;
+};
+
+#
 # Create and register the pipeline in the drm subsystem
 #
 METHOD int create_crtc {

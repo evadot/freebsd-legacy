@@ -77,7 +77,7 @@ arm/allwinner/h6/h6_r_padconf.c optional	soc_allwinner_h6 fdt
 dev/drm/allwinner/aw_de2_ui_plane.c	optional drm fdt aw_de2 compile-with "${DRM_C}"
 dev/drm/allwinner/aw_de2_vi_plane.c	optional drm fdt aw_de2 compile-with "${DRM_C}"
 dev/drm/allwinner/aw_de.c		optional drm fdt aw_de2 compile-with "${DRM_C}"
-dev/drm/allwinner/aw_de2.c		optional drm fdt aw_de2 compile-with "${DRM_C}"
+dev/drm/allwinner/aw_de2.c		optional fdt soc_allwinner_a64 | fdt soc_allwinner_h5
 dev/drm/allwinner/aw_de2_mixer.c	optional drm fdt aw_de2 compile-with "${DRM_C}"
 dev/drm/allwinner/aw_de2_tcon.c		optional drm fdt aw_de2 compile-with "${DRM_C}"
 dev/drm/allwinner/aw_de2_hdmi_phy.c	optional drm fdt aw_de2 compile-with "${DRM_C}"

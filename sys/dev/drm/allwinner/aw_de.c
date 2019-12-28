@@ -60,10 +60,15 @@ __FBSDID("$FreeBSD$");
 #include <drm/drm_ioctl.h>
 #include <drm/drm_vblank.h>
 
-#include <dev/drm/allwinner/aw_de.h>
-
 #include "fb_if.h"
 #include "aw_de2_mixer_if.h"
+
+struct aw_de_softc {
+	device_t		dev;
+
+	struct drm_device	drm_dev;
+	struct drm_fb_cma	*fb;
+};
 
 static struct ofw_compat_data compat_data[] = {
 	{ "allwinner,sun50i-a64-display-engine",	1 },
@@ -229,7 +234,6 @@ aw_de_irq_hook(void *arg)
 	int rv, nmixers, i;
 
 	sc = arg;
-	config_intrhook_disestablish(&sc->irq_hook);
 
 	node = ofw_bus_get_node(sc->dev);
 
@@ -249,6 +253,7 @@ aw_de_irq_hook(void *arg)
 		goto fail;
 	}
 
+	/* Attach the mixer(s) */
 	for (i = 0; i < nmixers; i++) {
 		if (bootverbose)
 			device_printf(sc->dev, "Lookup mixer with phandle %x\n",
@@ -272,7 +277,6 @@ aw_de_irq_hook(void *arg)
 	sc->drm_dev.mode_config.funcs = &aw_de_mode_config_funcs;
 	sc->drm_dev.mode_config.helper_private = &aw_de_mode_config_helpers;
 
-	/* We should setup a framebuffer here */
 	aw_de_drm_fb_init(&sc->drm_dev);
 
 	drm_kms_helper_poll_init(&sc->drm_dev);
@@ -287,7 +291,6 @@ aw_de_irq_hook(void *arg)
 	return;
 fail:
 	device_printf(sc->dev, "drm_dev_register(): %d\n", rv);
-	/* drm_dev_unref(&sc->drm_dev); */
 }
 
 static int
@@ -311,9 +314,7 @@ aw_de_attach(device_t dev)
 	sc = device_get_softc(dev);
 	sc->dev = dev;
 
-	sc->irq_hook.ich_func = aw_de_irq_hook;
-	sc->irq_hook.ich_arg = sc;
-	config_intrhook_establish(&sc->irq_hook);
+	config_intrhook_oneshot(&aw_de_irq_hook, sc);
 
 	return (0);
 }
@@ -321,8 +322,16 @@ aw_de_attach(device_t dev)
 static int
 aw_de_detach(device_t dev)
 {
+	struct aw_de_softc *sc;
 
-	return (EBUSY);
+	sc = device_get_softc(dev);
+
+	drm_dev_unregister(&sc->drm_dev);
+	drm_kms_helper_poll_fini(&sc->drm_dev);
+	drm_atomic_helper_shutdown(&sc->drm_dev);
+	drm_mode_config_cleanup(&sc->drm_dev);
+
+	return (0);
 }
 
 static device_method_t aw_de_methods[] = {
@@ -346,8 +355,9 @@ static devclass_t aw_de_devclass;
 
 DRIVER_MODULE(aw_de, simplebus, aw_de_driver,
     aw_de_devclass, 0, 0);
+MODULE_DEPEND(aw_de, aw_de2, 1, 1, 1);
 /* Bindings for fbd device. */
 extern devclass_t fbd_devclass;
 extern driver_t fbd_driver;
 DRIVER_MODULE(fbd, aw_de, fbd_driver, fbd_devclass, 0, 0);
-
+MODULE_DEPEND(aw_de, aw_de2_mixer, 1, 1, 1);

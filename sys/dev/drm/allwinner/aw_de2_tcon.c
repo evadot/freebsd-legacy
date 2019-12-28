@@ -368,7 +368,6 @@ static void aw_de2_tcon_encoder_mode_set(struct drm_encoder *encoder,
 
 {
 
-	printf("%s: called\n", __func__);
 }
 
 static const struct drm_encoder_helper_funcs aw_de2_tcon_encoder_helper_funcs = {
@@ -378,6 +377,18 @@ static const struct drm_encoder_helper_funcs aw_de2_tcon_encoder_helper_funcs = 
 static const struct drm_encoder_funcs aw_de2_tcon_encoder_funcs = {
 	.destroy = drm_encoder_cleanup,
 };
+
+static int
+aw_de2_tcon_set_mixer(device_t dev, device_t mixer_dev)
+{
+	struct aw_de2_tcon_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	sc->mixer = mixer_dev;
+
+	return (0);
+}
 
 static int
 aw_de2_tcon_create_crtc(device_t dev, struct drm_device *drm,
@@ -490,23 +501,35 @@ aw_de2_tcon_intr(void *arg)
 static int
 aw_de2_tcon_probe(device_t dev)
 {
-	enum tcon_model model;
+	struct aw_de2_tcon_softc *sc;
+	const char *model_name[2] = {
+		"Allwinner DE2 TV TCON",
+		"Allwinner DE2 LCD TCON",
+	};
+	int endpoint;
 
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	model = (enum tcon_model)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-	if (model == 0)
+	sc = device_get_softc(dev);
+	sc->model = (enum tcon_model)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
+	if (sc->model == 0)
 		return (ENXIO);
 
-	switch (model) {
-	case A83T_TCON_TV:
-		device_set_desc(dev, "Allwinner DE2 TV TCON");
-		break;
-	case A83T_TCON_LCD:
-		device_set_desc(dev, "Allwinner DE2 LCD TCON");
-		break;
+	/* If we cannot get our endpoint now no point of trying to attach */
+	endpoint = 0;
+	if (sc->model == A83T_TCON_TV)
+		endpoint = 1;
+	sc->outport = ofw_graph_get_device_by_port_ep(ofw_bus_get_node(dev),
+	    1, endpoint);
+	if (sc->outport == NULL) {
+		if (bootverbose)
+			device_printf(dev, "%s: Cannot find endpoint, aborting\n",
+			    model_name[sc->model - 1]);
+		return (ENXIO);
 	}
+
+	device_set_desc(dev, model_name[sc->model - 1]);
 
 	return (BUS_PROBE_DEFAULT);
 }
@@ -521,8 +544,6 @@ aw_de2_tcon_attach(device_t dev)
 	node = ofw_bus_get_node(dev);
 	sc = device_get_softc(dev);
 	sc->dev = dev;
-
-	sc->model = (enum tcon_model)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
 
 	if (bus_alloc_resources(dev, aw_de2_tcon_spec, sc->res) != 0) {
 		device_printf(dev, "cannot allocate resources for device\n");
@@ -613,8 +634,8 @@ fail:
 	return (error);
 }
 
-static void
-aw_de2_tcon_new_pass(device_t dev)
+static int
+aw_de2_tcon_detach(device_t dev)
 {
 	struct aw_de2_tcon_softc *sc;
 	phandle_t node;
@@ -622,27 +643,13 @@ aw_de2_tcon_new_pass(device_t dev)
 	sc = device_get_softc(dev);
 	node = ofw_bus_get_node(dev);
 
-	if (sc->attach_done ||
-	    bus_current_pass < (BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_MIDDLE)) {
-		bus_generic_new_pass(dev);
-		return;
-	}
-	sc->attach_done = 1;
+	clk_release(sc->clk_tcon);
+	clk_release(sc->clk_ahb);
+	hwreset_release(sc->rst_lcd);
+	if (sc->rst_lvds)
+		hwreset_release(sc->rst_lvds);
 
-	sc->mixer = ofw_graph_get_device_by_port_ep(node, 0, 1);
-	if (sc->mixer == NULL) {
-		device_printf(dev, "Cannot get remote endpoint device for port 0 and endpoint 0\n");
-	}
-}
-
-static int
-aw_de2_tcon_detach(device_t dev)
-{
-	struct aw_de2_tcon_softc *sc;
-
-	sc = device_get_softc(dev);
-
-	bus_generic_detach(sc->dev);
+	bus_teardown_intr(dev, sc->res[1], sc->intrhand);
 	bus_release_resources(dev, aw_de2_tcon_spec, sc->res);
 	mtx_destroy(&sc->mtx);
 
@@ -655,10 +662,8 @@ static device_method_t aw_de2_tcon_methods[] = {
 	DEVMETHOD(device_attach,	aw_de2_tcon_attach),
 	DEVMETHOD(device_detach,	aw_de2_tcon_detach),
 
-	/* Bus interface */
-	DEVMETHOD(bus_new_pass,		aw_de2_tcon_new_pass),
-
 	/* AW_DE2_TCON interface */
+	DEVMETHOD(aw_de2_tcon_set_mixer,	aw_de2_tcon_set_mixer),
 	DEVMETHOD(aw_de2_tcon_create_crtc,	aw_de2_tcon_create_crtc),
 	DEVMETHOD_END
 };
@@ -673,3 +678,5 @@ static devclass_t aw_de2_tcon_devclass;
 
 EARLY_DRIVER_MODULE(aw_tcon, simplebus, aw_de2_tcon_driver,
   aw_de2_tcon_devclass, 0, 0, BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_MIDDLE);
+MODULE_DEPEND(aw_de2_tcon, aw_de2_dw_hdmi, 1, 1, 1);
+MODULE_VERSION(aw_de2_tcon, 1);

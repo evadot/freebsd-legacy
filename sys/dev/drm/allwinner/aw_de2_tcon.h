@@ -96,9 +96,5 @@
 #define	 TCON_TIMING5_HSPW_SHIFT	16
 #define	 TCON_TIMING5_HSPW(x)		(((x - 1) << TCON_TIMING5_HSPW_SHIFT) & TCON_TIMING5_HSPW_MASK)
 
-/* tmp, need an interface */
-int
-aw_de2_tcon_add_crtc(device_t dev, struct drm_plane *main_plane, struct drm_plane *cursor_plane, struct drm_device *drm);
-
 #endif /* _AW_DE2_TCON_H_ */
 

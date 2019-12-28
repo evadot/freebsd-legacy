@@ -533,7 +533,15 @@ aw_de2_hdmi_phy_detach(device_t dev)
 	struct aw_de2_hdmi_phy_softc *sc;
 	sc = device_get_softc(dev);
 
-	bus_generic_detach(sc->dev);
+	if (hwreset_assert(sc->reset) != 0)
+		device_printf(dev, "Cannot assert reset\n");
+	if (clk_disable(sc->clk_pll) != 0)
+		device_printf(dev, "Cannot disable pll-0 clock\n");
+	if (clk_disable(sc->clk_mod) != 0)
+		device_printf(dev, "Cannot disable mod clock\n");
+	if (clk_disable(sc->clk_bus) != 0)
+		device_printf(dev, "Cannot disable bus clock\n");
+
 	bus_release_resources(dev, aw_de2_hdmi_phy_spec, sc->res);
 
 	return (0);
@@ -563,3 +571,4 @@ static devclass_t aw_de2_hdmi_phy_devclass;
 
 EARLY_DRIVER_MODULE(aw_de2_hdmi_phy, simplebus, aw_de2_hdmi_phy_driver,
   aw_de2_hdmi_phy_devclass, 0, 0, BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_FIRST);
+MODULE_VERSION(aw_de2_hdmi_phy, 1);

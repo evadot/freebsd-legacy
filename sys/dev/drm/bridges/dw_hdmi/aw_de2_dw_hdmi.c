@@ -757,3 +757,5 @@ static devclass_t aw_de2_dw_hdmi_devclass;
 
 EARLY_DRIVER_MODULE(aw_de2_dw_hdmi, simplebus, aw_de2_dw_hdmi_driver,
   aw_de2_dw_hdmi_devclass, 0, 0, BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_EARLY);
+MODULE_VERSION(aw_de2_dw_hdmi, 1);
+MODULE_DEPEND(aw_de2_dw_hdmi, aw_de2_hdmi_phy, 1, 1, 1);

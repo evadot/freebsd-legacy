@@ -63,6 +63,7 @@
 #define	AW_DE2_MIXER_WRITE_4(sc, reg, val)	bus_write_4((sc)->res[0], (reg), (val))
 
 struct aw_de2_mixer_config {
+	char			*name;
 	size_t			vi_planes;
 	size_t			ui_planes;
 	int			dst_tcon;

@@ -56,18 +56,21 @@ __FBSDID("$FreeBSD$");
 #include "aw_de2_tcon_if.h"
 
 static const struct aw_de2_mixer_config a64_mixer0_config = {
+	.name = "Allwinner DE2 A64-Mixer 0",
 	.vi_planes = 1,
 	.ui_planes = 3,
 	.dst_tcon = 0,
 };
 
 static const struct aw_de2_mixer_config a64_mixer1_config = {
+	.name = "Allwinner DE2 A64-Mixer 1",
 	.vi_planes = 1,
 	.ui_planes = 1,
 	.dst_tcon = 1,
 };
 
 static const struct aw_de2_mixer_config h3_mixer0_config = {
+	.name = "Allwinner DE2 H3-Mixer 0",
 	.vi_planes = 1,
 	.ui_planes = 1,
 	.dst_tcon = 0,
@@ -102,13 +105,27 @@ static void aw_de2_layer_dump_regs(struct aw_de2_mixer_softc *sc);
 static int
 aw_de2_mixer_probe(device_t dev)
 {
+	struct aw_de2_mixer_softc *sc;
+
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
-	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
+	sc = device_get_softc(dev);
+	sc->conf = (struct aw_de2_mixer_config *)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
+	if (sc->conf == 0)
 		return (ENXIO);
 
-	device_set_desc(dev, "Allwinner DE2 MIXER");
+	/* If we can't get the tcon now no need to attach */
+	sc->tcon = ofw_graph_get_device_by_port_ep(ofw_bus_get_node(dev),
+	    1, sc->conf->dst_tcon);
+	if (sc->tcon == NULL) {
+		if (bootverbose)
+			device_printf(dev, "%s: Cannot find tcon, aborting\n",
+			    sc->conf->name);
+		return (ENXIO);
+	}
+
+	device_set_desc(dev, sc->conf->name);
 	return (BUS_PROBE_DEFAULT);
 }
 
@@ -133,25 +150,29 @@ aw_de2_mixer_attach(device_t dev)
 
 	if ((error = clk_get_by_ofw_name(dev, node, "bus", &sc->clk_bus)) != 0) {
 		device_printf(dev, "Cannot get bus clock\n");
+		error = ENXIO;
 		goto fail;
 	}
 	if (clk_enable(sc->clk_bus) != 0) {
 		device_printf(dev, "Cannot enable bus clock\n");
+		error = ENXIO;
 		goto fail;
 	}
 	if ((error = clk_get_by_ofw_name(dev, node, "mod", &sc->clk_mod)) != 0) {
 		device_printf(dev, "Cannot get mod clock\n");
+		error = ENXIO;
 		goto fail;
 	}
 	if (clk_enable(sc->clk_mod) != 0) {
 		device_printf(dev, "Cannot enable mod clock\n");
+		error = ENXIO;
 		goto fail;
 	}
 	if ((error = hwreset_get_by_ofw_idx(dev, node, 0, &sc->reset)) != 0) {
 		device_printf(dev, "Cannot get reset\n");
 		goto fail;
 	}
-	if (hwreset_deassert(sc->reset) != 0) {
+	if ((error = hwreset_deassert(sc->reset)) != 0) {
 		device_printf(dev, "Cannot deassert reset\n");
 		goto fail;
 	}
@@ -159,8 +180,10 @@ aw_de2_mixer_attach(device_t dev)
 	sc->tcon = ofw_graph_get_device_by_port_ep(node, 1, sc->conf->dst_tcon);
 	if (sc->tcon == NULL) {
 		device_printf(dev, "Cannot get device from remote endpoint\n");
+		error = ENXIO;
 		goto fail;
 	}
+	AW_DE2_TCON_SET_MIXER(sc->tcon, dev);
 
 	/* Register ourself so aw_de can resolve who we are */
 	OF_device_register_xref(OF_xref_from_node(node), dev);
@@ -195,17 +218,19 @@ static int
 aw_de2_mixer_detach(device_t dev)
 {
 	struct aw_de2_mixer_softc *sc;
+	phandle_t node;
 
 	sc = device_get_softc(dev);
+	node = ofw_bus_get_node(dev);
 
 	if (sc->vi_planes)
 		free(sc->vi_planes, DRM_MEM_DRIVER);
 	if (sc->ui_planes)
 		free(sc->ui_planes, DRM_MEM_DRIVER);
-	if (sc->reset)
-		hwreset_release(sc->reset);
+	clk_release(sc->clk_mod);
+	clk_release(sc->clk_bus);
+	hwreset_release(sc->reset);
 
-	bus_generic_detach(sc->dev);
 	bus_release_resources(dev, aw_de2_mixer_spec, sc->res);
 
 	return (0);
@@ -233,6 +258,8 @@ static devclass_t aw_de2_mixer_devclass;
 
 EARLY_DRIVER_MODULE(aw_de2_mixer, simplebus, aw_de2_mixer_driver,
   aw_de2_mixer_devclass, 0, 0, BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_LATE);
+MODULE_DEPEND(aw_de2_mixer, aw_de2_tcon, 1, 1, 1);
+MODULE_VERSION(aw_de2_mixer, 1);
 
 static int
 aw_de2_mixer_commit(device_t dev)
