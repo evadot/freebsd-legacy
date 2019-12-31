@@ -123,6 +123,16 @@
 		regulator-always-on;
 	};
 
+	vcc3v3_s0: vcc3v3-s0-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio1 RK_PC6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcdvcc_en>;
+		regulator-name = "vcc3v3_s0";
+		regulator-always-on;
+	};
+
 	vcc_sys: vcc-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_sys";
@@ -343,8 +353,8 @@
 				};
 			};
 
-			vcc3v3_s0: SWITCH_REG2 {
-				regulator-name = "vcc3v3_s0";
+			unused: SWITCH_REG2 {
+				regulator-name = "SWITCH_REG2";
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-state-mem {
@@ -480,6 +490,11 @@
 		host_usb3_drv: host-usb3-drv {
 			rockchip,pins = <1 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
+
+		/* Shared between LCD and usb */
+		lcdvcc_en: lcdvcc-en {
+			rockchip,pins = <1 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
 	};
 };
 
@@ -569,10 +584,12 @@
 };
 
 &usb_host1_ehci {
+	phy-supply = <&vcc3v3_s0>;
 	status = "okay";
 };
 
 &usb_host1_ohci {
+	phy-supply = <&vcc3v3_s0>;
 	status = "okay";
 };
 
