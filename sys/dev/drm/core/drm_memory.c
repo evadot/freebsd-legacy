@@ -120,14 +120,16 @@ int drm_unbind_agp(struct agp_memory *handle)
 }
 
 #else /*  CONFIG_AGP  */
+#ifdef __linux__
 static inline void *agp_remap(unsigned long offset, unsigned long size,
 			      struct drm_device *dev)
 {
 	return NULL;
 }
-
+#endif /* __linux__ */
 #endif /* CONFIG_AGP */
 
+#ifdef __linux__
 void drm_legacy_ioremap(struct drm_local_map *map, struct drm_device *dev)
 {
 	if (dev->agp && dev->agp->cant_use_aperture && map->type == _DRM_AGP)
@@ -157,6 +159,7 @@ void drm_legacy_ioremapfree(struct drm_local_map *map, struct drm_device *dev)
 		iounmap(map->handle);
 }
 EXPORT_SYMBOL(drm_legacy_ioremapfree);
+#endif /* __linux__ */
 
 #ifdef __linux__
 bool drm_need_swiotlb(int dma_bits)

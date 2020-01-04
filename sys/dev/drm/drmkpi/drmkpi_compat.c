@@ -110,10 +110,6 @@ panic_cmp(struct rb_node *one, struct rb_node *two)
 RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
 #endif
 
-static struct rwlock linux_vma_lock;
-static TAILQ_HEAD(, vm_area_struct) linux_vma_head =
-    TAILQ_HEAD_INITIALIZER(linux_vma_head);
-
 #define	LINUX_IOCTL_MIN_PTR 0x10000UL
 #define	LINUX_IOCTL_MAX_PTR (LINUX_IOCTL_MIN_PTR + IOCPARM_MAX)
 
@@ -239,114 +235,6 @@ iminor(struct inode *inode)
 		return (-1U);
 
 	return (vnode->v_rdev->si_drv0);
-}
-
-/*
- * Hash of vmmap addresses.  This is infrequently accessed and does not
- * need to be particularly large.  This is done because we must store the
- * caller's idea of the map size to properly unmap.
- */
-struct vmmap {
-	LIST_ENTRY(vmmap)	vm_next;
-	void 			*vm_addr;
-	unsigned long		vm_size;
-};
-
-struct vmmaphd {
-	struct vmmap *lh_first;
-};
-#define	VMMAP_HASH_SIZE	64
-#define	VMMAP_HASH_MASK	(VMMAP_HASH_SIZE - 1)
-#define	VM_HASH(addr)	((uintptr_t)(addr) >> PAGE_SHIFT) & VMMAP_HASH_MASK
-static struct vmmaphd vmmaphead[VMMAP_HASH_SIZE];
-static struct mtx vmmaplock;
-
-static void
-vmmap_add(void *addr, unsigned long size)
-{
-	struct vmmap *vmmap;
-
-	vmmap = kmalloc(sizeof(*vmmap), GFP_KERNEL);
-	mtx_lock(&vmmaplock);
-	vmmap->vm_size = size;
-	vmmap->vm_addr = addr;
-	LIST_INSERT_HEAD(&vmmaphead[VM_HASH(addr)], vmmap, vm_next);
-	mtx_unlock(&vmmaplock);
-}
-
-static struct vmmap *
-vmmap_remove(void *addr)
-{
-	struct vmmap *vmmap;
-
-	mtx_lock(&vmmaplock);
-	LIST_FOREACH(vmmap, &vmmaphead[VM_HASH(addr)], vm_next)
-		if (vmmap->vm_addr == addr)
-			break;
-	if (vmmap)
-		LIST_REMOVE(vmmap, vm_next);
-	mtx_unlock(&vmmaplock);
-
-	return (vmmap);
-}
-
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__)
-void *
-_ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr)
-{
-	void *addr;
-
-	addr = pmap_mapdev_attr(phys_addr, size, attr);
-	if (addr == NULL)
-		return (NULL);
-	vmmap_add(addr, size);
-
-	return (addr);
-}
-#endif
-
-void
-iounmap(void *addr)
-{
-	struct vmmap *vmmap;
-
-	vmmap = vmmap_remove(addr);
-	if (vmmap == NULL)
-		return;
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__)
-	pmap_unmapdev((vm_offset_t)addr, vmmap->vm_size);
-#endif
-	kfree(vmmap);
-}
-
-
-void *
-vmap(struct page **pages, unsigned int count, unsigned long flags, int prot)
-{
-	vm_offset_t off;
-	size_t size;
-
-	size = count * PAGE_SIZE;
-	off = kva_alloc(size);
-	if (off == 0)
-		return (NULL);
-	vmmap_add((void *)off, size);
-	pmap_qenter(off, pages, count);
-
-	return ((void *)off);
-}
-
-void
-vunmap(void *addr)
-{
-	struct vmmap *vmmap;
-
-	vmmap = vmmap_remove(addr);
-	if (vmmap == NULL)
-		return;
-	pmap_qremove((vm_offset_t)addr, vmmap->vm_size / PAGE_SIZE);
-	kva_free((vm_offset_t)addr, vmmap->vm_size);
-	kfree(vmmap);
 }
 
 static void
@@ -617,35 +505,6 @@ linux_in_atomic(void)
 
 	return ((curthread->td_pflags & TDP_NOFAULTING) != 0);
 }
-
-
-#if defined(__i386__) || defined(__amd64__)
-bool linux_cpu_has_clflush;
-#endif
-
-static void
-linux_compat_init(void *arg)
-{
-	int i;
-
-#if defined(__i386__) || defined(__amd64__)
-	linux_cpu_has_clflush = (cpu_feature & CPUID_CLFSH);
-#endif
-	rw_init(&linux_vma_lock, "lkpi-vma-lock");
-
-	mtx_init(&vmmaplock, "IO Map lock", NULL, MTX_DEF);
-	for (i = 0; i < VMMAP_HASH_SIZE; i++)
-		LIST_INIT(&vmmaphead[i]);
-}
-SYSINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_init, NULL);
-
-static void
-linux_compat_uninit(void *arg)
-{
-
-	mtx_destroy(&vmmaplock);
-}
-SYSUNINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_uninit, NULL);
 
 /*
  * NOTE: Linux frequently uses "unsigned long" for pointer to integer
