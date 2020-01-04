@@ -49,6 +49,8 @@ __FBSDID("$FreeBSD$");
 #include <drm/drm_gem.h>
 #include <drm/drm_gem_cma_helper.h>
 
+/* #define DRM_GEM_CMA_DEBUG	1 */
+
 static int
 drm_gem_cma_create_with_handle(struct drm_file *file, struct drm_device *drm,
     size_t size, uint32_t *handle, struct drm_gem_cma_object **res_bo);
@@ -59,7 +61,9 @@ drm_gem_cma_destruct(struct drm_gem_cma_object *bo)
 	vm_page_t m;
 	int i;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	if (bo->vbase != 0) {
 		pmap_qremove(bo->vbase, bo->npages);
 		vmem_free(kmem_arena, bo->vbase, round_page(bo->gem_obj.size));
@@ -83,7 +87,9 @@ drm_gem_cma_alloc_contig(size_t npages, u_long alignment, vm_memattr_t memattr,
 	int pflags, tries, i;
 	vm_paddr_t low, high, boundary;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	low = 0;
 	high = -1UL;
 	boundary = 0;
@@ -122,7 +128,9 @@ drm_gem_cma_alloc(struct drm_device *drm, struct drm_gem_cma_object *bo)
 	vm_page_t m;
 	int i;	int rv;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	size = round_page(bo->gem_obj.size);
 	bo->npages = atop(size);
 	bo->size = round_page(size);
@@ -169,7 +177,9 @@ drm_gem_cma_fault(struct vm_area_struct *dummy, struct vm_fault *vmf)
 	struct page *page;
 	int i;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	vma = vmf->vma;
 	gem_obj = vma->vm_private_data;
 	bo = container_of(gem_obj, struct drm_gem_cma_object, gem_obj);
@@ -196,13 +206,17 @@ drm_gem_cma_fault(struct vm_area_struct *dummy, struct vm_fault *vmf)
 
 	vma->vm_pfn_first = 0;
 	vma->vm_pfn_count =  bo->npages;
-printf("%s: pidx: %llu, start: 0x%08X, addr: 0x%08lX\n", __func__, pidx, vma->vm_start, vmf->address);
+#ifdef DRM_GEM_CMA_DEBUG
+	printf("%s: pidx: %llu, start: 0x%08X, addr: 0x%08lX\n", __func__, pidx, vma->vm_start, vmf->address);
+#endif
 
 	return (VM_FAULT_NOPAGE);
 
 fail_unlock:
 	VM_OBJECT_WUNLOCK(obj);
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("%s: insert failed\n", __func__);
+#endif
 	return (VM_FAULT_SIGBUS);
 }
 
@@ -219,7 +233,9 @@ drm_gem_cma_create_with_handle(struct drm_file *file, struct drm_device *drm,
 	int rv;
 	struct drm_gem_cma_object *bo;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	rv = drm_gem_cma_create(drm, size, &bo);
 	if (rv != 0)
 		return (rv);
@@ -246,7 +262,9 @@ drm_gem_cma_free_object(struct drm_gem_object *gem_obj)
 {
 	struct drm_gem_cma_object *bo;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s\n", __func__);
+#endif
 	bo = container_of(gem_obj, struct drm_gem_cma_object, gem_obj);
 	drm_gem_free_mmap_offset(gem_obj);
 	drm_gem_object_release(gem_obj);
@@ -300,7 +318,9 @@ drm_gem_cma_create(struct drm_device *drm, size_t size, struct drm_gem_cma_objec
 	struct drm_gem_cma_object *bo;
 	int rv;
 
+#ifdef DRM_GEM_CMA_DEBUG
 	printf("[DEBUG]: %s: size=%d\n", __func__, size);
+#endif
 	if (size <= 0)
 		return (-EINVAL);
 
@@ -309,13 +329,17 @@ drm_gem_cma_create(struct drm_device *drm, size_t size, struct drm_gem_cma_objec
 	size = round_page(size);
 	rv = drm_gem_object_init(drm, &bo->gem_obj, size);
 	if (rv != 0) {
+#ifdef DRM_GEM_CMA_DEBUG
 		printf("[DEBUG]: %s: drm_gem_object_init failed\n", __func__);
+#endif
 		free(bo, DRM_MEM_DRIVER);
 		return (rv);
 	}
 	rv = drm_gem_create_mmap_offset(&bo->gem_obj);
 	if (rv != 0) {
+#ifdef DRM_GEM_CMA_DEBUG
 		printf("[DEBUG]: %s: drm_gem_create_mmap_offset failed\n", __func__);
+#endif
 		drm_gem_object_release(&bo->gem_obj);
 		free(bo, DRM_MEM_DRIVER);
 		return (rv);
@@ -323,7 +347,9 @@ drm_gem_cma_create(struct drm_device *drm, size_t size, struct drm_gem_cma_objec
 
 	rv = drm_gem_cma_alloc(drm, bo);
 	if (rv != 0) {
+#ifdef DRM_GEM_CMA_DEBUG
 		printf("[DEBUG]: %s: drm_gem_cma_alloc failed\n", __func__);
+#endif
 		drm_gem_cma_free_object(&bo->gem_obj);
 		return (rv);
 	}
