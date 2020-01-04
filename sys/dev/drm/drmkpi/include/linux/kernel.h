@@ -419,6 +419,37 @@ kstrtobool_from_user(const char __user *s, size_t count, bool *res)
 	return (kstrtobool(buf, res));
 }
 
+static inline char *
+kvasprintf(gfp_t gfp, const char *fmt, va_list ap)
+{
+	unsigned int len;
+	char *p;
+	va_list aq;
+
+	va_copy(aq, ap);
+	len = vsnprintf(NULL, 0, fmt, aq);
+	va_end(aq);
+
+	p = kmalloc(len + 1, gfp);
+	if (p != NULL)
+		vsnprintf(p, len + 1, fmt, ap);
+
+	return (p);
+}
+
+static inline char *
+kasprintf(gfp_t gfp, const char *fmt, ...)
+{
+	va_list ap;
+	char *p;
+
+	va_start(ap, fmt);
+	p = kvasprintf(gfp, fmt, ap);
+	va_end(ap);
+
+	return (p);
+}
+
 #define min(x, y)	((x) < (y) ? (x) : (y))
 #define max(x, y)	((x) > (y) ? (x) : (y))
 
