@@ -56,13 +56,31 @@ __FBSDID("$FreeBSD$");
 #include "drm_bridge_if.h"
 
 enum tcon_model {
-	A83T_TCON_TV = 1,
-	A83T_TCON_LCD,
+	A83T_TCON_LCD = 1,
+	A83T_TCON_TV,
+};
+
+struct tcon_config {
+	enum tcon_model	model;
+	const char	*name;
+	const char	*clk_parent_name;
+};
+
+static struct tcon_config a83t_tcon_lcd = {
+	.model = A83T_TCON_LCD,
+	.name = "Allwinner DE2 LCD TCON",
+	.clk_parent_name = "pll_video0-2x",
+};
+
+static struct tcon_config a83t_tcon_tv = {
+	.model = A83T_TCON_TV,
+	.name = "Allwinner DE2 TV TCON",
+	.clk_parent_name = "pll_video1",
 };
 
 static struct ofw_compat_data compat_data[] = {
-	{ "allwinner,sun8i-a83t-tcon-tv",	A83T_TCON_TV },
-	{ "allwinner,sun8i-a83t-tcon-lcd",	A83T_TCON_LCD },
+	{ "allwinner,sun8i-a83t-tcon-lcd",	(uintptr_t)&a83t_tcon_lcd },
+	{ "allwinner,sun8i-a83t-tcon-tv",	(uintptr_t)&a83t_tcon_tv },
 	{ NULL,					0 }
 };
 
@@ -78,7 +96,7 @@ struct aw_de2_tcon_softc {
 	void *		intrhand;
 	struct mtx	mtx;
 
-	enum tcon_model	model;
+	struct tcon_config	*conf;
 	clk_t		clk_ahb;
 	clk_t		clk_tcon;
 	hwreset_t	rst_lcd;
@@ -289,6 +307,7 @@ aw_crtc_mode_set_nofb(struct drm_crtc *crtc)
 {
 	struct aw_de2_tcon_softc *sc;
 	struct drm_display_mode *mode;
+	clk_t parent;
 	uint32_t reg;
 #ifdef TCON_DEBUG
 	uint64_t freq;
@@ -297,6 +316,15 @@ aw_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	sc = container_of(crtc, struct aw_de2_tcon_softc, crtc);
 	mode = &crtc->state->adjusted_mode;
 
+	clk_disable(sc->clk_tcon);
+	if (clk_get_by_name(sc->dev, sc->conf->clk_parent_name, &parent) != 0) {
+		device_printf(sc->dev, "Cannot get parent clock %s\n",
+		    sc->conf->clk_parent_name);
+	}
+	if (clk_set_parent_by_clk(sc->clk_tcon, parent) != 0) {
+		device_printf(sc->dev, "Cannot set parent to %s\n",
+		    sc->conf->clk_parent_name);
+	}
 #ifdef TCON_DEBUG
 	device_printf(sc->dev, "%s: start\n", __func__);
 	aw_de2_tcon_dump_regs(sc);
@@ -308,6 +336,7 @@ aw_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	clk_get_freq(sc->clk_tcon, &freq);
 	device_printf(sc->dev, "New freq: %lu\n", freq);
 #endif
+	clk_enable(sc->clk_tcon);
 	AW_DE2_TCON_LOCK(sc);
 
 	/* Clock delay, writing what u-boot left, need to figure what it is */
@@ -413,7 +442,7 @@ aw_de2_tcon_create_crtc(device_t dev, struct drm_device *drm,
 
 	drm_crtc_helper_add(&sc->crtc, &aw_crtc_helper_funcs);
 
-	if (sc->model == A83T_TCON_LCD) {
+	if (sc->conf->model == A83T_TCON_LCD) {
 		drm_encoder_helper_add(&sc->encoder, &aw_de2_tcon_encoder_helper_funcs);
 		sc->encoder.possible_crtcs = drm_crtc_mask(&sc->crtc);
 		drm_encoder_init(drm, &sc->encoder, &aw_de2_tcon_encoder_funcs,
@@ -502,34 +531,30 @@ static int
 aw_de2_tcon_probe(device_t dev)
 {
 	struct aw_de2_tcon_softc *sc;
-	const char *model_name[2] = {
-		"Allwinner DE2 TV TCON",
-		"Allwinner DE2 LCD TCON",
-	};
 	int endpoint;
 
 	if (!ofw_bus_status_okay(dev))
 		return (ENXIO);
 
 	sc = device_get_softc(dev);
-	sc->model = (enum tcon_model)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-	if (sc->model == 0)
+	sc->conf = (struct tcon_config *)ofw_bus_search_compatible(dev, compat_data)->ocd_data;
+	if (sc->conf == 0)
 		return (ENXIO);
 
 	/* If we cannot get our endpoint now no point of trying to attach */
 	endpoint = 0;
-	if (sc->model == A83T_TCON_TV)
+	if (sc->conf->model == A83T_TCON_TV)
 		endpoint = 1;
 	sc->outport = ofw_graph_get_device_by_port_ep(ofw_bus_get_node(dev),
 	    1, endpoint);
 	if (sc->outport == NULL) {
 		if (bootverbose)
 			device_printf(dev, "%s: Cannot find endpoint, aborting\n",
-			    model_name[sc->model - 1]);
+			    sc->conf->name);
 		return (ENXIO);
 	}
 
-	device_set_desc(dev, model_name[sc->model - 1]);
+	device_set_desc(dev, sc->conf->name);
 
 	return (BUS_PROBE_DEFAULT);
 }
@@ -569,12 +594,12 @@ aw_de2_tcon_attach(device_t dev)
 		goto fail;
 	}
 
-	if (sc->model == A83T_TCON_LCD) {
+	if (sc->conf->model == A83T_TCON_LCD) {
 		if ((error = clk_get_by_ofw_name(dev, node, "tcon-ch0", &sc->clk_tcon)) != 0) {
 			device_printf(dev, "Cannot get tcon clock\n");
 			goto fail;
 		}
-	} else if (sc->model == A83T_TCON_TV) {
+	} else if (sc->conf->model == A83T_TCON_TV) {
 		if ((error = clk_get_by_ofw_name(dev, node, "tcon-ch1", &sc->clk_tcon)) != 0) {
 			device_printf(dev, "Cannot get tcon clock\n");
 			goto fail;
@@ -593,7 +618,7 @@ aw_de2_tcon_attach(device_t dev)
 		goto fail;
 	}
 
-	if (sc->model == A83T_TCON_LCD) {
+	if (sc->conf->model == A83T_TCON_LCD) {
 		if ((error = hwreset_get_by_ofw_name(dev, node, "lvds", &sc->rst_lvds)) != 0) {
 			device_printf(dev, "Cannot get lvds reset\n");
 			goto fail;
@@ -605,7 +630,7 @@ aw_de2_tcon_attach(device_t dev)
 	}
 
 	endpoint = 0;
-	if (sc->model == A83T_TCON_TV)
+	if (sc->conf->model == A83T_TCON_TV)
 		endpoint = 1;
 	sc->outport = ofw_graph_get_device_by_port_ep(node, 1, endpoint);
 	if (sc->outport == NULL) {
