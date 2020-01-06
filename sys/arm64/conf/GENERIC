@@ -317,6 +317,9 @@ device		kbdmux
 
 device		vt_efifb
 
+# DRM Video Controllers
+device		drm
+
 # EVDEV support
 device		evdev			# input event device support
 options		EVDEV_SUPPORT		# evdev support in legacy drivers
