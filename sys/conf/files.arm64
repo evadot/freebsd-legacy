@@ -409,9 +409,6 @@ dev/drm/freebsd/drm_sysctl_freebsd.c			optional drm	compile-with "${DRM_C}"
 dev/drm/freebsd/drm_sysfs_freebsd.c			optional drm	compile-with "${DRM_C}"
 dev/drm/bridges/drm_bridge_if.m				optional drm
 
-# Remaining GPL files
-dev/drm/drmkpi/gpl/linux_rbtree.c	optional	drm	compile-with "${DRM_C}"
-
 # DRMKPI files
 dev/drm/drmkpi/drmkpi_compat.c		optional	drm	compile-with "${DRM_C}"
 dev/drm/drmkpi/drmkpi_current.c		optional	drm	compile-with "${DRM_C}"

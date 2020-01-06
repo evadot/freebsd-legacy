@@ -80,6 +80,7 @@ __FBSDID("$FreeBSD$");
 #include <linux/poll.h>
 #include <linux/smp.h>
 #include <linux/preempt.h>
+#include <linux/rbtree.h>
 
 #if defined(__i386__) || defined(__amd64__)
 #include <asm/smp.h>
@@ -89,18 +90,11 @@ SYSCTL_NODE(_compat, OID_AUTO, linuxkpi, CTLFLAG_RW, 0, "LinuxKPI parameters");
 
 MALLOC_DEFINE(M_KMALLOC, "linux", "Linux kmalloc compat");
 
-#if 0
-#include <linux/rbtree.h>
 #undef RB_ROOT
 #define	RB_ROOT(head)	(head)->rbh_root
-#endif
-
-/* Undo Linux compat changes. */
-
 
 unsigned long linux_timer_hz_mask;
 
-#if 0
 int
 panic_cmp(struct rb_node *one, struct rb_node *two)
 {
@@ -108,7 +102,6 @@ panic_cmp(struct rb_node *one, struct rb_node *two)
 }
 
 RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
-#endif
 
 #define	LINUX_IOCTL_MIN_PTR 0x10000UL
 #define	LINUX_IOCTL_MAX_PTR (LINUX_IOCTL_MIN_PTR + IOCPARM_MAX)
