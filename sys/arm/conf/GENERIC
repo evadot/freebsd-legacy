@@ -245,6 +245,9 @@ device		videomode
 device		hdmi
 device		vchiq
 
+# DRM Video Controllers
+device		drm
+
 # Pinmux
 device		fdt_pinctrl
 
