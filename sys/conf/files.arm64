@@ -89,6 +89,9 @@ dev/drm/bridges/dw_hdmi/aw_de2_dw_hdmi.c	optional drm fdt dw_hdmi aw_de2_drm com
 dev/drm/bridges/dw_hdmi/dw_hdmi_if.m		optional drm fdt dw_hdmi aw_de2_drm
 dev/drm/bridges/dw_hdmi/dw_hdmi_phy_if.m	optional drm fdt dw_hdmi aw_de2_drm
 
+# ANX6345 RGB to eDP bridge
+dev/drm/bridges/anx6345/anx6345.c		optional fdt anx6345 compile-with "${DRM_C}"
+
 arm/annapurna/alpine/alpine_ccu.c		optional	al_ccu fdt
 arm/annapurna/alpine/alpine_nb_service.c	optional	al_nb_service fdt
 arm/annapurna/alpine/alpine_pci.c		optional	al_pci fdt
