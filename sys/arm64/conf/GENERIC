@@ -331,6 +331,7 @@ device		aw_de2_drm
 
 # DRM Bridges
 device		dw_hdmi
+device		anx6345
 
 # EVDEV support
 device		evdev			# input event device support
