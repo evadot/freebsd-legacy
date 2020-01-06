@@ -247,6 +247,10 @@ device		vchiq
 
 # DRM Video Controllers
 device		drm
+device		aw_de2_drm
+
+# DRM Bridges
+device		dw_hdmi
 
 # Pinmux
 device		fdt_pinctrl
