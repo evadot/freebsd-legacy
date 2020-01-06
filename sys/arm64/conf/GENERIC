@@ -326,6 +326,10 @@ device		vt_efifb
 
 # DRM Video Controllers
 device		drm
+device		aw_de2_drm
+
+# DRM Bridges
+device		dw_hdmi
 
 # EVDEV support
 device		evdev			# input event device support
