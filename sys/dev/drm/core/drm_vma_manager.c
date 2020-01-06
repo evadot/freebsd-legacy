@@ -142,22 +142,34 @@ struct drm_vma_offset_node *drm_vma_offset_lookup_locked(struct drm_vma_offset_m
 							 unsigned long pages)
 {
 	struct drm_mm_node *node, *best;
+#ifdef __linux__
 	struct rb_node *iter;
+#endif
 	unsigned long offset;
 
+#ifdef __linux__
 	iter = mgr->vm_addr_space_mm.interval_tree.rb_root.rb_node;
+#endif
 	best = NULL;
 
+#ifdef __linux__
 	while (likely(iter)) {
 		node = rb_entry(iter, struct drm_mm_node, rb);
+#elif defined(__FreeBSD__)
+	drm_mm_for_each_node(node, &mgr->vm_addr_space_mm) {
+#endif
 		offset = node->start;
 		if (start >= offset) {
+#ifdef __linux__
 			iter = iter->rb_right;
+#endif
 			best = node;
 			if (start == offset)
 				break;
+#ifdef __linux__
 		} else {
 			iter = iter->rb_left;
+#endif
 		}
 	}
 

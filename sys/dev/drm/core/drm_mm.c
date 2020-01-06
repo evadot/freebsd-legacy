@@ -152,6 +152,7 @@ static void show_leaks(struct drm_mm *mm) { }
 #define START(node) ((node)->start)
 #define LAST(node)  ((node)->start + (node)->size - 1)
 
+#ifdef __linux__
 INTERVAL_TREE_DEFINE(struct drm_mm_node, rb,
 		     u64, __subtree_last,
 		     START, LAST, static inline, drm_mm_interval_tree)
@@ -163,7 +164,9 @@ __drm_mm_interval_first(const struct drm_mm *mm, u64 start, u64 last)
 					       start, last) ?: (struct drm_mm_node *)&mm->head_node;
 }
 EXPORT_SYMBOL(__drm_mm_interval_first);
+#endif
 
+#ifdef __linux__
 static void drm_mm_interval_tree_add_node(struct drm_mm_node *hole_node,
 					  struct drm_mm_node *node)
 {
@@ -211,6 +214,7 @@ static void drm_mm_interval_tree_add_node(struct drm_mm_node *hole_node,
 	rb_insert_augmented_cached(&node->rb, &mm->interval_tree, leftmost,
 				   &drm_mm_interval_tree_augment);
 }
+#endif /* __linux__ */
 
 #ifdef __FreeBSD__
 #undef RB_INSERT
@@ -294,10 +298,12 @@ static inline struct drm_mm_node *rb_hole_addr_to_node(struct rb_node *rb)
 	return rb_entry_safe(rb, struct drm_mm_node, rb_hole_addr);
 }
 
+#ifdef __linux__
 static inline u64 rb_hole_size(struct rb_node *rb)
 {
 	return rb_entry(rb, struct drm_mm_node, rb_hole_size)->hole_size;
 }
+#endif
 
 static struct drm_mm_node *best_hole(struct drm_mm *mm, u64 size)
 {
@@ -428,7 +434,9 @@ int drm_mm_reserve_node(struct drm_mm *mm, struct drm_mm_node *node)
 	node->mm = mm;
 
 	list_add(&node->node_list, &hole->node_list);
+#ifdef __linux__
 	drm_mm_interval_tree_add_node(hole, node);
+#endif
 	node->allocated = true;
 	node->hole_size = 0;
 
@@ -547,7 +555,9 @@ int drm_mm_insert_node_in_range(struct drm_mm * const mm,
 		node->hole_size = 0;
 
 		list_add(&node->node_list, &hole->node_list);
+#ifdef __linux__
 		drm_mm_interval_tree_add_node(hole, node);
+#endif
 		node->allocated = true;
 
 		rm_hole(hole);
@@ -574,7 +584,9 @@ EXPORT_SYMBOL(drm_mm_insert_node_in_range);
  */
 void drm_mm_remove_node(struct drm_mm_node *node)
 {
+#ifdef __linux__
 	struct drm_mm *mm = node->mm;
+#endif
 	struct drm_mm_node *prev_node;
 
 	DRM_MM_BUG_ON(!node->allocated);
@@ -585,7 +597,9 @@ void drm_mm_remove_node(struct drm_mm_node *node)
 	if (drm_mm_hole_follows(node))
 		rm_hole(node);
 
+#ifdef __linux__
 	drm_mm_interval_tree_remove(node, &mm->interval_tree);
+#endif
 	list_del(&node->node_list);
 	node->allocated = false;
 
