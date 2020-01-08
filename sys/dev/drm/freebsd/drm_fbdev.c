@@ -37,6 +37,19 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 
+/* Call restore out of vt(9) locks. */
+
+static void
+vt_restore_fbdev_mode(void *arg, int pending)
+{
+	struct drm_fb_helper *fb_helper;
+	struct vt_kms_softc *sc;
+
+	sc = (struct vt_kms_softc *)arg;
+	fb_helper = sc->fb_helper;
+	drm_fb_helper_restore_fbdev_mode_unlocked(fb_helper);
+}
+
 static int
 vt_kms_postswitch(void *arg)
 {
@@ -46,7 +59,10 @@ vt_kms_postswitch(void *arg)
 
 	DRM_DEBUG("%s: called\n", __func__);
 
-	drm_fb_helper_restore_fbdev_mode_unlocked(sc->fb_helper);
+	if (!kdb_active && panicstr == NULL)
+		taskqueue_enqueue(taskqueue_thread, &sc->fb_mode_task);
+	else
+		drm_fb_helper_restore_fbdev_mode_unlocked(sc->fb_helper);
 
 	return (0);
 }
@@ -60,6 +76,7 @@ framebuffer_alloc(size_t size, struct device *dev)
 	info = malloc(sizeof(*info), DRM_MEM_KMS, M_WAITOK | M_ZERO);
 
 	sc = malloc(sizeof(*sc), DRM_MEM_KMS, M_WAITOK | M_ZERO);
+	TASK_INIT(&sc->fb_mode_task, 0, vt_restore_fbdev_mode, sc);
 
 	info->fb_priv = sc;
 	info->enter = &vt_kms_postswitch;
