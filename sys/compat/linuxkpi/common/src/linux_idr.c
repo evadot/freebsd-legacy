@@ -37,6 +37,9 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/proc.h>
+#include <sys/sched.h>
+#include <sys/smp.h>
 
 #include <machine/stdarg.h>
 
@@ -45,6 +48,7 @@ __FBSDID("$FreeBSD$");
 #include <linux/slab.h>
 #include <linux/idr.h>
 #include <linux/err.h>
+#include <linux/spinlock.h>
 
 #define	MAX_IDR_LEVEL	((MAX_IDR_SHIFT + IDR_BITS - 1) / IDR_BITS)
 #define	MAX_IDR_FREE	(MAX_IDR_LEVEL * 2)
