@@ -501,7 +501,7 @@ dw_hdmi_bridge_enable(struct drm_bridge *bridge)
 	reg &= ~DW_HDMI_MC_CLKDIS_TMDSCLK;
 	AW_DE2_DW_HDMI_WRITE_1(sc, DW_HDMI_MC_CLKDIS, reg);
 
-	if (drm_debug & DRM_UT_DRIVER) {
+	if (__drm_debug & DRM_UT_DRIVER) {
 		dw_hdmi_dump_vp_regs(sc);
 		dw_hdmi_dump_fc_regs(sc);
 	}

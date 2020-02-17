@@ -253,7 +253,7 @@ aw_de2_mixer_attach(device_t dev)
 	/* Enable the mixer */
 	AW_DE2_MIXER_WRITE_4(sc, GBL_CTL, GBL_CTL_EN);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_mixer_dump_regs(sc);
 
 	return (0);
@@ -319,7 +319,7 @@ aw_de2_mixer_commit(device_t dev)
 
 	AW_DE2_MIXER_WRITE_4(sc, 0x08, 1);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_mixer_dump_regs(sc);
 
 	return (0);
