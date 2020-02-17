@@ -26,7 +26,7 @@ DRM_INCLUDES+=	-I${S}/dev/drm/drmkpi/include/
 
 DRM_CFLAGS=	${CFLAGS} ${DRM_INCLUDES}
 DRM_CFLAGS+=	-include ${S}/dev/drm/drmkpi/include/drm/drm_os_freebsd.h
-DRM_CFLAGS+=	'-DKBUILD_MODNAME="DRMv5.4"'
+DRM_CFLAGS+=	'-DKBUILD_MODNAME="DRMv5.5"'
 DRM_CFLAGS+=	-Wno-cast-qual -Wno-pointer-arith -Wno-missing-prototypes
 # Complain about unsigned long long versus uint64_t, remove -Wformat for now
 DRM_CFLAGS+=	-Wno-format
