@@ -24,6 +24,7 @@
 #ifndef DRM_MODESET_LOCK_H_
 #define DRM_MODESET_LOCK_H_
 
+#include <linux/lockdep.h>
 #include <linux/ww_mutex.h>
 
 struct drm_modeset_lock;
