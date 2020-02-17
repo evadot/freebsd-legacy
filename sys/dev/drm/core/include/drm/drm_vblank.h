@@ -24,6 +24,7 @@
 #ifndef _DRM_VBLANK_H_
 #define _DRM_VBLANK_H_
 
+#include <linux/atomic.h> /* FBSD: Linux header polution */
 #include <linux/seqlock.h>
 #include <linux/idr.h>
 #include <linux/poll.h>
