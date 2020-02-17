@@ -317,7 +317,7 @@ aw_de2_vi_plane_atomic_update(struct drm_plane *plane,
 	reg &= 0xFF0F;
 	AW_DE2_MIXER_WRITE_4(sc, BLD_CH_ROUTING, reg);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_vi_plane_dump_regs(sc, 1);
 }
 

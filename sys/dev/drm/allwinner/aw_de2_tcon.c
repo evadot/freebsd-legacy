@@ -379,7 +379,7 @@ aw_crtc_mode_set_nofb(struct drm_crtc *crtc)
 		return;
 	}
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_tcon_dump_regs(sc);
 	clk_get_freq(sc->clk_tcon, &freq);
 	DRM_DEBUG_DRIVER("%s: Current freq: %lu, Changing to %lu\n",
@@ -426,7 +426,7 @@ aw_crtc_mode_set_nofb(struct drm_crtc *crtc)
 	    TCON_TIMING5_HSPW(mode->crtc_hsync_end - mode->crtc_hsync_start) |
 	    TCON_TIMING5_VSPW(mode->crtc_vsync_end - mode->crtc_vsync_start));
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_tcon_dump_regs(sc);
 
 	AW_DE2_TCON_UNLOCK(sc);
@@ -645,7 +645,7 @@ aw_de2_tcon_attach(device_t dev)
 	/* Enable module */
 	AW_DE2_TCON_WRITE_4(sc, TCON_GCTL, TCON_GCTL_EN);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_tcon_dump_regs(sc);
 
 	return (0);
