@@ -606,12 +606,17 @@ void drm_mm_remove_node(struct drm_mm_node *node)
 	drm_mm_interval_tree_remove(node, &mm->interval_tree);
 #endif
 	list_del(&node->node_list);
+#ifdef __FreeBSD__
+	__clear_bit(DRM_MM_NODE_ALLOCATED_BIT, &node->flags);
+#endif
 
 	if (drm_mm_hole_follows(prev_node))
 		rm_hole(prev_node);
 	add_hole(prev_node);
 
+#ifdef __linux__
 	clear_bit_unlock(DRM_MM_NODE_ALLOCATED_BIT, &node->flags);
+#endif
 }
 EXPORT_SYMBOL(drm_mm_remove_node);
 
@@ -646,7 +651,12 @@ void drm_mm_replace_node(struct drm_mm_node *old, struct drm_mm_node *new)
 				&mm->holes_addr);
 	}
 
+#ifdef __FreeBSD__
+	__clear_bit(DRM_MM_NODE_ALLOCATED_BIT, &old->flags);
+	__set_bit(DRM_MM_NODE_ALLOCATED_BIT, &new->flags);
+#elif __linux__
 	clear_bit_unlock(DRM_MM_NODE_ALLOCATED_BIT, &old->flags);
+#endif
 }
 EXPORT_SYMBOL(drm_mm_replace_node);
 
