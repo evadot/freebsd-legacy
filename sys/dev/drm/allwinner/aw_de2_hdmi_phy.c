@@ -275,7 +275,7 @@ aw_de2_hdmi_phy_init(device_t dev)
 	  ANA_CFG1_ENP2S_TMDS2);
 
 	DRM_DEBUG_DRIVER("Waiting calibration\n");
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	/* Wait for calibration to finish */
@@ -291,7 +291,7 @@ aw_de2_hdmi_phy_init(device_t dev)
 	if (timeout == 0) {
 		DRM_DEBUG_DRIVER("Calibration failed\n");
 	}
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	PHY_UPDATE_BITS(sc, ANA_CFG1,
@@ -316,7 +316,7 @@ aw_de2_hdmi_phy_init(device_t dev)
 	PHY_UPDATE_BITS(sc, PLL_CFG1, PLL_CFG1_PLLEN, PLL_CFG1_PLLEN);
 	DELAY(1000);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	reg = (AW_DE2_HDMI_PHY_READ_4(sc, ANA_STS) & ANA_STS_B_OUT_MASK) >> ANA_STS_B_OUT_SHIFT;
@@ -324,7 +324,7 @@ aw_de2_hdmi_phy_init(device_t dev)
 	PHY_UPDATE_BITS(sc, PLL_CFG1, PLL_CFG1_OD | PLL_CFG1_OD1, PLL_CFG1_OD | PLL_CFG1_OD1);
 	PHY_UPDATE_BITS(sc, PLL_CFG1, PLL_CFG1_B_IN(reg), PLL_CFG1_B_IN(reg));
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	/* Magic values from the datasheet for 297Mhz TMDS rate, will need to split those into known bits */
@@ -336,7 +336,7 @@ aw_de2_hdmi_phy_init(device_t dev)
 	/* Read calibration value */
 	sc->rcal = AW_DE2_HDMI_PHY_READ_4(sc, ANA_STS) & ANA_STS_RESDO2D_MASK;
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	/* unscrambler the hdmi registers */
@@ -360,7 +360,7 @@ aw_de2_hdmi_phy_config(device_t dev, struct drm_display_mode *mode)
 
 	DRM_DEBUG_DRIVER("Pixel clock: %d\n", mode->crtc_clock);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	/* Pixel clock is in kHz */
@@ -417,7 +417,7 @@ aw_de2_hdmi_phy_config(device_t dev, struct drm_display_mode *mode)
 	AW_DE2_HDMI_PHY_WRITE_4(sc, ANA_CFG2, ana_cfg2);
 	AW_DE2_HDMI_PHY_WRITE_4(sc, ANA_CFG3, ana_cfg3);
 
-	if (drm_debug & DRM_UT_DRIVER)
+	if (__drm_debug & DRM_UT_DRIVER)
 		aw_de2_hdmi_phy_dump_regs(sc);
 
 	return (0);
