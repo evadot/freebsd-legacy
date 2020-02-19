@@ -75,22 +75,38 @@ struct idr {
 	SYSINIT(name##_ida_sysinit, SI_SUB_DRIVERS, SI_ORDER_FIRST,	\
 	    ida_init, &(name))
 
-void	idr_preload(gfp_t gfp_mask);
-void	idr_preload_end(void);
-void	*idr_find(struct idr *idp, int id);
-void	*idr_get_next(struct idr *idp, int *nextid);
-bool	idr_is_empty(struct idr *idp);
-int	idr_pre_get(struct idr *idp, gfp_t gfp_mask);
-int	idr_get_new(struct idr *idp, void *ptr, int *id);
-int	idr_get_new_above(struct idr *idp, void *ptr, int starting_id, int *id);
-void	*idr_replace(struct idr *idp, void *ptr, int id);
-void	*idr_remove(struct idr *idp, int id);
-void	idr_remove_all(struct idr *idp);
-void	idr_destroy(struct idr *idp);
-void	idr_init(struct idr *idp);
-int	idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t);
-int	idr_alloc_cyclic(struct idr *idp, void *ptr, int start, int end, gfp_t);
-int	idr_for_each(struct idr *idp, int (*fn)(int id, void *p, void *data), void *data);
+#define	idr_preload	drmkpi_idr_preload
+void	drmkpi_idr_preload(gfp_t gfp_mask);
+#define	idr_preload_end	drmkpi_idr_preload_end
+void	drmkpi_idr_preload_end(void);
+#define	idr_find	drmkpi_idr_find
+void	*drmkpi_idr_find(struct idr *idp, int id);
+#define	idr_get_next	drmkpi_idr_get_next
+void	*drmkpi_idr_get_next(struct idr *idp, int *nextid);
+#define	idr_is_empty	drmkpi_idr_is_empty
+bool	drmkpi_idr_is_empty(struct idr *idp);
+#define	idr_pre_get	drmkpi_idr_pre_get
+int	drmkpi_idr_pre_get(struct idr *idp, gfp_t gfp_mask);
+#define	idr_get_new	drmkpi_idr_get_new
+int	drmkpi_idr_get_new(struct idr *idp, void *ptr, int *id);
+#define	idr_get_new_above	drmkpi_idr_get_new_above
+int	drmkpi_idr_get_new_above(struct idr *idp, void *ptr, int starting_id, int *id);
+#define	idr_replace	drmkpi_idr_replace
+void	*drmkpi_idr_replace(struct idr *idp, void *ptr, int id);
+#define	idr_remove	drmkpi_idr_remove
+void	*drmkpi_idr_remove(struct idr *idp, int id);
+#define	idr_remove_all	drmkpi_idr_remove_all
+void	drmkpi_idr_remove_all(struct idr *idp);
+#define	idr_destroy	drmkpi_idr_destroy
+void	drmkpi_idr_destroy(struct idr *idp);
+#define	idr_init	drmkpi_idr_init
+void	drmkpi_idr_init(struct idr *idp);
+#define	idr_alloc drmkpi_idr_alloc
+int	drmkpi_idr_alloc(struct idr *idp, void *ptr, int start, int end, gfp_t);
+#define	idr_alloc_cyclic drmkpi_idr_alloc_cyclic
+int	drmkpi_idr_alloc_cyclic(struct idr *idp, void *ptr, int start, int end, gfp_t);
+#define	idr_for_each	drmkpi_idr_for_each
+int	drmkpi_idr_for_each(struct idr *idp, int (*fn)(int id, void *p, void *data), void *data);
 
 #define	idr_for_each_entry(idp, entry, id)	\
 	for ((id) = 0; ((entry) = idr_get_next(idp, &(id))) != NULL; ++(id))
@@ -109,20 +125,27 @@ struct ida {
 	struct ida_bitmap	*free_bitmap;
 };
 
-int	ida_pre_get(struct ida *ida, gfp_t gfp_mask);
-int	ida_get_new_above(struct ida *ida, int starting_id, int *p_id);
-void	ida_remove(struct ida *ida, int id);
-void	ida_destroy(struct ida *ida);
-void	ida_init(struct ida *ida);
+#define	ida_pre_get	drmkpi_ida_pre_get
+int	drmkpi_ida_pre_get(struct ida *ida, gfp_t gfp_mask);
+#define	ida_pre_get_new_above	drmkpi_ida_get_new_above
+int	drmkpi_ida_get_new_above(struct ida *ida, int starting_id, int *p_id);
+#define	ida_remove	drmkpi_ida_remove
+void	drmkpi_ida_remove(struct ida *ida, int id);
+#define	ida_destroy	drmkpi_ida_destroy
+void	drmkpi_ida_destroy(struct ida *ida);
+#define	ida_init	drmkpi_ida_init
+void	drmkpi_ida_init(struct ida *ida);
 
-int	ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
+#define	ida_simple_get	drmkpi_ida_simple_get
+int	drmkpi_ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
     gfp_t gfp_mask);
-void	ida_simple_remove(struct ida *ida, unsigned int id);
+#define	ida_simple_remove	drmkpi_ida_simple_remove
+void	drmkpi_ida_simple_remove(struct ida *ida, unsigned int id);
 
 static inline int
 ida_get_new(struct ida *ida, int *p_id)
 {
-	return (ida_get_new_above(ida, 0, p_id));
+	return (drmkpi_ida_get_new_above(ida, 0, p_id));
 }
 
 #endif	/* _LINUX_IDR_H_ */
