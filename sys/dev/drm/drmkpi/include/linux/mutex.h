@@ -63,7 +63,7 @@ typedef struct mutex {
 
 #define	mutex_lock_interruptible(_m) ({		\
 	MUTEX_SKIP() ? 0 :			\
-	linux_mutex_lock_interruptible(_m);	\
+	drmkpi_mutex_lock_interruptible(_m);	\
 })
 
 #define	mutex_unlock(_m) do {			\
@@ -143,6 +143,6 @@ linux_mutex_destroy(mutex_t *m)
 	sx_destroy(&m->sx);
 }
 
-extern int linux_mutex_lock_interruptible(mutex_t *m);
+extern int drmkpi_mutex_lock_interruptible(mutex_t *m);
 
 #endif					/* _LINUX_MUTEX_H_ */
