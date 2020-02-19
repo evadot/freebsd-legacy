@@ -96,7 +96,7 @@ void drm_print_regset32(struct drm_printer *p, struct debugfs_regset32 *regset);
 #endif
 void drm_print_bits(struct drm_printer *p, unsigned long value,
 		    const char * const bits[], unsigned int nbits);
- 
+
 __printf(2, 0)
 /**
  * drm_vprintf - print to a &drm_printer stream
