@@ -88,8 +88,8 @@ struct wait_queue_head {
  * This function is referenced by at least one DRM driver, so it may not be
  * renamed and furthermore must be the default wait queue callback.
  */
-extern wait_queue_func_t autoremove_wake_function;
-extern wait_queue_func_t default_wake_function;
+extern wait_queue_func_t drmkpi_autoremove_wake_function;
+extern wait_queue_func_t drmkpi_default_wake_function;
 
 #define	DEFINE_WAIT_FUNC(name, function)				\
 	wait_queue_t name = {						\
@@ -99,7 +99,7 @@ extern wait_queue_func_t default_wake_function;
 	}
 
 #define	DEFINE_WAIT(name) \
-	DEFINE_WAIT_FUNC(name, autoremove_wake_function)
+	DEFINE_WAIT_FUNC(name, drmkpi_autoremove_wake_function)
 
 #define	DECLARE_WAITQUEUE(name, task)					\
 	wait_queue_t name = {						\
@@ -119,25 +119,25 @@ extern wait_queue_func_t default_wake_function;
 	INIT_LIST_HEAD(&(wqh)->task_list);				\
 } while (0)
 
-void linux_init_wait_entry(wait_queue_t *, int);
-void linux_wake_up(wait_queue_head_t *, unsigned int, int, bool);
+void drmkpi_init_wait_entry(wait_queue_t *, int);
+void drmkpi_wake_up(wait_queue_head_t *, unsigned int, int, bool);
 
 #define	init_wait_entry(wq, flags)					\
-        linux_init_wait_entry(wq, flags)
+        drmkpi_init_wait_entry(wq, flags)
 #define	wake_up(wqh)							\
-	linux_wake_up(wqh, TASK_NORMAL, 1, false)
+	drmkpi_wake_up(wqh, TASK_NORMAL, 1, false)
 #define	wake_up_all(wqh)						\
-	linux_wake_up(wqh, TASK_NORMAL, 0, false)
+	drmkpi_wake_up(wqh, TASK_NORMAL, 0, false)
 #define	wake_up_locked(wqh)						\
-	linux_wake_up(wqh, TASK_NORMAL, 1, true)
+	drmkpi_wake_up(wqh, TASK_NORMAL, 1, true)
 #define	wake_up_all_locked(wqh)						\
-	linux_wake_up(wqh, TASK_NORMAL, 0, true)
+	drmkpi_wake_up(wqh, TASK_NORMAL, 0, true)
 #define	wake_up_interruptible(wqh)					\
-	linux_wake_up(wqh, TASK_INTERRUPTIBLE, 1, false)
+	drmkpi_wake_up(wqh, TASK_INTERRUPTIBLE, 1, false)
 #define	wake_up_interruptible_all(wqh)					\
-	linux_wake_up(wqh, TASK_INTERRUPTIBLE, 0, false)
+	drmkpi_wake_up(wqh, TASK_INTERRUPTIBLE, 0, false)
 
-int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
+int drmkpi_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
     unsigned int, spinlock_t *);
 
 /*
@@ -152,15 +152,15 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
 	int __ret = 0;						\
 								\
 	for (;;) {						\
-		linux_prepare_to_wait(&(wqh), &__wq, state);	\
+		drmkpi_prepare_to_wait(&(wqh), &__wq, state);	\
 		if (cond)					\
 			break;					\
-		__ret = linux_wait_event_common(&(wqh), &__wq,	\
+		__ret = drmkpi_wait_event_common(&(wqh), &__wq,	\
 		    __timeout, state, lock);			\
 		if (__ret != 0)					\
 			break;					\
 	}							\
-	linux_finish_wait(&(wqh), &__wq);			\
+	drmkpi_finish_wait(&(wqh), &__wq);			\
 	if (__timeout != MAX_SCHEDULE_TIMEOUT) {		\
 		if (__ret == -EWOULDBLOCK)			\
 			__ret = !!(cond);			\
@@ -272,26 +272,26 @@ remove_wait_queue(wait_queue_head_t *wqh, wait_queue_t *wq)
 	spin_unlock(&wqh->lock);
 }
 
-bool linux_waitqueue_active(wait_queue_head_t *);
+bool drmkpi_waitqueue_active(wait_queue_head_t *);
 
 #define	waitqueue_active(wqh)		linux_waitqueue_active(wqh)
 
-void linux_prepare_to_wait(wait_queue_head_t *, wait_queue_t *, int);
-void linux_finish_wait(wait_queue_head_t *, wait_queue_t *);
+void drmkpi_prepare_to_wait(wait_queue_head_t *, wait_queue_t *, int);
+void drmkpi_finish_wait(wait_queue_head_t *, wait_queue_t *);
 
-#define	prepare_to_wait(wqh, wq, state)	linux_prepare_to_wait(wqh, wq, state)
-#define	finish_wait(wqh, wq)		linux_finish_wait(wqh, wq)
+#define	prepare_to_wait(wqh, wq, state)	drmkpi_prepare_to_wait(wqh, wq, state)
+#define	finish_wait(wqh, wq)		drmkpi_finish_wait(wqh, wq)
 
-void linux_wake_up_bit(void *, int);
-int linux_wait_on_bit_timeout(unsigned long *, int, unsigned int, int);
-void linux_wake_up_atomic_t(atomic_t *);
-int linux_wait_on_atomic_t(atomic_t *, unsigned int);
+void drmkpi_wake_up_bit(void *, int);
+int drmkpi_wait_on_bit_timeout(unsigned long *, int, unsigned int, int);
+void drmkpi_wake_up_atomic_t(atomic_t *);
+int drmkpi_wait_on_atomic_t(atomic_t *, unsigned int);
 
-#define	wake_up_bit(word, bit)		linux_wake_up_bit(word, bit)
+#define	wake_up_bit(word, bit)		drmkpi_wake_up_bit(word, bit)
 #define	wait_on_bit(word, bit, state)					\
-	linux_wait_on_bit_timeout(word, bit, state, MAX_SCHEDULE_TIMEOUT)
+	drmkpi_wait_on_bit_timeout(word, bit, state, MAX_SCHEDULE_TIMEOUT)
 #define	wait_on_bit_timeout(word, bit, state, timeout)			\
-	linux_wait_on_bit_timeout(word, bit, state, timeout)
+	drmkpi_wait_on_bit_timeout(word, bit, state, timeout)
 #define	wake_up_atomic_t(a)		linux_wake_up_atomic_t(a)
 /*
  * All existing callers have a cb that just schedule()s. To avoid adding
@@ -299,12 +299,12 @@ int linux_wait_on_atomic_t(atomic_t *, unsigned int);
  * callers must be manually modified; a cb that does something other than call
  * schedule() will require special treatment.
  */
-#define	wait_on_atomic_t(a, state)	linux_wait_on_atomic_t(a, state)
+#define	wait_on_atomic_t(a, state)	drmkp_wait_on_atomic_t(a, state)
 
 struct task_struct;
-bool linux_wake_up_state(struct task_struct *, unsigned int);
+bool drmkpi_wake_up_state(struct task_struct *, unsigned int);
 
-#define	wake_up_process(task)		linux_wake_up_state(task, TASK_NORMAL)
-#define	wake_up_state(task, state)	linux_wake_up_state(task, state)
+#define	wake_up_process(task)		drmkpi_wake_up_state(task, TASK_NORMAL)
+#define	wake_up_state(task, state)	drmkpi_wake_up_state(task, state)
 
 #endif /* _LINUX_WAIT_H_ */
