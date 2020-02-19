@@ -127,7 +127,7 @@ idr_preload_uninit(void *arg)
 SYSUNINIT(idr_preload_uninit, SI_SUB_LOCK, SI_ORDER_FIRST, idr_preload_uninit, NULL);
 
 void
-idr_preload(gfp_t gfp_mask)
+drmkpi_idr_preload(gfp_t gfp_mask)
 {
 	struct linux_idr_cache *lic;
 	struct idr_layer *cacheval;
@@ -151,7 +151,7 @@ idr_preload(gfp_t gfp_mask)
 }
 
 void
-idr_preload_end(void)
+drmkpi_idr_preload_end(void)
 {
 	struct linux_idr_cache *lic;
 
@@ -173,7 +173,7 @@ idr_pos(int id, int layer)
 }
 
 void
-idr_init(struct idr *idr)
+drmkpi_idr_init(struct idr *idr)
 {
 	bzero(idr, sizeof(*idr));
 	mtx_init(&idr->lock, "idr", NULL, MTX_DEF);
@@ -181,7 +181,7 @@ idr_init(struct idr *idr)
 
 /* Only frees cached pages. */
 void
-idr_destroy(struct idr *idr)
+drmkpi_idr_destroy(struct idr *idr)
 {
 	struct idr_layer *il, *iln;
 
@@ -212,7 +212,7 @@ idr_remove_layer(struct idr_layer *il, int layer)
 }
 
 void
-idr_remove_all(struct idr *idr)
+drmkpi_idr_remove_all(struct idr *idr)
 {
 
 	mtx_lock(&idr->lock);
@@ -262,7 +262,7 @@ idr_remove_locked(struct idr *idr, int id)
 }
 
 void *
-idr_remove(struct idr *idr, int id)
+drmkpi_idr_remove(struct idr *idr, int id)
 {
 	void *res;
 
@@ -293,7 +293,7 @@ idr_find_layer_locked(struct idr *idr, int id)
 }
 
 void *
-idr_replace(struct idr *idr, void *ptr, int id)
+drmkpi_idr_replace(struct idr *idr, void *ptr, int id)
 {
 	struct idr_layer *il;
 	void *res;
@@ -330,7 +330,7 @@ idr_find_locked(struct idr *idr, int id)
 }
 
 void *
-idr_find(struct idr *idr, int id)
+drmkpi_idr_find(struct idr *idr, int id)
 {
 	void *res;
 
@@ -341,7 +341,7 @@ idr_find(struct idr *idr, int id)
 }
 
 void *
-idr_get_next(struct idr *idr, int *nextidp)
+drmkpi_idr_get_next(struct idr *idr, int *nextidp)
 {
 	void *res = NULL;
 	int id = *nextidp;
@@ -359,7 +359,7 @@ idr_get_next(struct idr *idr, int *nextidp)
 }
 
 int
-idr_pre_get(struct idr *idr, gfp_t gfp_mask)
+drmkpi_idr_pre_get(struct idr *idr, gfp_t gfp_mask)
 {
 	struct idr_layer *il, *iln;
 	struct idr_layer *head;
@@ -503,7 +503,7 @@ out:
 }
 
 int
-idr_get_new(struct idr *idr, void *ptr, int *idp)
+drmkpi_idr_get_new(struct idr *idr, void *ptr, int *idp)
 {
 	int retval;
 
@@ -621,7 +621,7 @@ out:
 }
 
 int
-idr_get_new_above(struct idr *idr, void *ptr, int starting_id, int *idp)
+drmkpi_idr_get_new_above(struct idr *idr, void *ptr, int starting_id, int *idp)
 {
 	int retval;
 
@@ -632,7 +632,7 @@ idr_get_new_above(struct idr *idr, void *ptr, int starting_id, int *idp)
 }
 
 int
-ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
+drmkpi_ida_get_new_above(struct ida *ida, int starting_id, int *p_id)
 {
 	return (idr_get_new_above(&ida->idr, NULL, starting_id, p_id));
 }
@@ -666,7 +666,7 @@ idr_alloc_locked(struct idr *idr, void *ptr, int start, int end)
 }
 
 int
-idr_alloc(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
+drmkpi_idr_alloc(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
 {
 	int retval;
 
@@ -677,7 +677,7 @@ idr_alloc(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
 }
 
 int
-idr_alloc_cyclic(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
+drmkpi_idr_alloc_cyclic(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
 {
 	int retval;
 
@@ -722,7 +722,7 @@ idr_for_each_layer(struct idr_layer *il, int offset, int layer,
 
 /* NOTE: It is not allowed to modify the IDR tree while it is being iterated */
 int
-idr_for_each(struct idr *idp, int (*f)(int id, void *p, void *data), void *data)
+drmkpi_idr_for_each(struct idr *idp, int (*f)(int id, void *p, void *data), void *data)
 {
 	return (idr_for_each_layer(idp->top, 0, idp->layers - 1, f, data));
 }
@@ -735,14 +735,14 @@ idr_has_entry(int id, void *p, void *data)
 }
 
 bool
-idr_is_empty(struct idr *idp)
+drmkpi_idr_is_empty(struct idr *idp)
 {
 
 	return (idr_for_each(idp, idr_has_entry, NULL) == 0);
 }
 
 int
-ida_pre_get(struct ida *ida, gfp_t flags)
+drmkpi_ida_pre_get(struct ida *ida, gfp_t flags)
 {
 	if (idr_pre_get(&ida->idr, flags) == 0)
 		return (0);
@@ -755,7 +755,7 @@ ida_pre_get(struct ida *ida, gfp_t flags)
 }
 
 int
-ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
+drmkpi_ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
     gfp_t flags)
 {
 	int ret, id;
@@ -774,7 +774,7 @@ again:
 	if (!ida_pre_get(ida, flags))
 		return (-ENOMEM);
 
-	if ((ret = ida_get_new_above(ida, start, &id)) == 0) {
+	if ((ret = drmkpi_ida_get_new_above(ida, start, &id)) == 0) {
 		if (id > max) {
 			ida_remove(ida, id);
 			ret = -ENOSPC;
@@ -789,25 +789,25 @@ again:
 }
 
 void
-ida_simple_remove(struct ida *ida, unsigned int id)
+drmkpi_ida_simple_remove(struct ida *ida, unsigned int id)
 {
 	idr_remove(&ida->idr, id);
 }
 
 void
-ida_remove(struct ida *ida, int id)
+drmkpi_ida_remove(struct ida *ida, int id)
 {
 	idr_remove(&ida->idr, id);
 }
 
 void
-ida_init(struct ida *ida)
+drmkpi_ida_init(struct ida *ida)
 {
 	idr_init(&ida->idr);
 }
 
 void
-ida_destroy(struct ida *ida)
+drmkpi_ida_destroy(struct ida *ida)
 {
 	idr_destroy(&ida->idr);
 	free(ida->free_bitmap, M_IDR);
