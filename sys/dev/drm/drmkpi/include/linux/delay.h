@@ -48,7 +48,7 @@ linux_msleep(unsigned int ms)
 #define	msleep(ms) linux_msleep(ms)
 
 #undef msleep_interruptible
-#define	msleep_interruptible(ms) linux_msleep_interruptible(ms)
+#define	msleep_interruptible(ms) drmkpi_msleep_interruptible(ms)
 
 #define	udelay(t)	DELAY(t)
 

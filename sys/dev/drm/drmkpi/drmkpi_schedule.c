@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD$");
 #include <linux/wait.h>
 
 static int
-linux_add_to_sleepqueue(void *wchan, struct task_struct *task,
+drmkpi_add_to_sleepqueue(void *wchan, struct task_struct *task,
     const char *wmesg, int timeout, int state)
 {
 	int flags, ret;
@@ -80,7 +80,7 @@ linux_add_to_sleepqueue(void *wchan, struct task_struct *task,
 }
 
 unsigned int
-linux_msleep_interruptible(unsigned int ms)
+drmkpi_msleep_interruptible(unsigned int ms)
 {
 	int ret;
 
@@ -117,7 +117,7 @@ wake_up_task(struct task_struct *task, unsigned int state)
 }
 
 bool
-linux_signal_pending(struct task_struct *task)
+drmkpi_signal_pending(struct task_struct *task)
 {
 	struct thread *td;
 	sigset_t pending;
@@ -132,7 +132,7 @@ linux_signal_pending(struct task_struct *task)
 }
 
 bool
-linux_fatal_signal_pending(struct task_struct *task)
+drmkpi_fatal_signal_pending(struct task_struct *task)
 {
 	struct thread *td;
 	bool ret;
@@ -146,18 +146,18 @@ linux_fatal_signal_pending(struct task_struct *task)
 }
 
 bool
-linux_signal_pending_state(long state, struct task_struct *task)
+drmkpi_signal_pending_state(long state, struct task_struct *task)
 {
 
 	MPASS((state & ~TASK_NORMAL) == 0);
 
 	if ((state & TASK_INTERRUPTIBLE) == 0)
 		return (false);
-	return (linux_signal_pending(task));
+	return (drmkpi_signal_pending(task));
 }
 
 void
-linux_send_sig(int signo, struct task_struct *task)
+drmkpi_send_sig(int signo, struct task_struct *task)
 {
 	struct thread *td;
 
@@ -168,7 +168,7 @@ linux_send_sig(int signo, struct task_struct *task)
 }
 
 int
-autoremove_wake_function(wait_queue_t *wq, unsigned int state, int flags,
+drmkpi_autoremove_wake_function(wait_queue_t *wq, unsigned int state, int flags,
     void *key __unused)
 {
 	struct task_struct *task;
@@ -181,25 +181,25 @@ autoremove_wake_function(wait_queue_t *wq, unsigned int state, int flags,
 }
 
 int
-default_wake_function(wait_queue_t *wq, unsigned int state, int flags,
+drmkpi_default_wake_function(wait_queue_t *wq, unsigned int state, int flags,
     void *key __unused)
 {
 	return (wake_up_task(wq->private, state));
 }
 
 void
-linux_init_wait_entry(wait_queue_t *wq, int flags)
+drmkpi_init_wait_entry(wait_queue_t *wq, int flags)
 {
 
 	memset(wq, 0, sizeof(*wq));
 	wq->flags = flags;
 	wq->private = current;
-	wq->func = autoremove_wake_function;
+	wq->func = drmkpi_autoremove_wake_function;
 	INIT_LIST_HEAD(&wq->task_list);
 }
 
 void
-linux_wake_up(wait_queue_head_t *wqh, unsigned int state, int nr, bool locked)
+drmkpi_wake_up(wait_queue_head_t *wqh, unsigned int state, int nr, bool locked)
 {
 	wait_queue_t *pos, *next;
 
@@ -219,7 +219,7 @@ linux_wake_up(wait_queue_head_t *wqh, unsigned int state, int nr, bool locked)
 }
 
 void
-linux_prepare_to_wait(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
+drmkpi_prepare_to_wait(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
 {
 
 	spin_lock(&wqh->lock);
@@ -230,7 +230,7 @@ linux_prepare_to_wait(wait_queue_head_t *wqh, wait_queue_t *wq, int state)
 }
 
 void
-linux_finish_wait(wait_queue_head_t *wqh, wait_queue_t *wq)
+drmkpi_finish_wait(wait_queue_head_t *wqh, wait_queue_t *wq)
 {
 
 	spin_lock(&wqh->lock);
@@ -243,7 +243,7 @@ linux_finish_wait(wait_queue_head_t *wqh, wait_queue_t *wq)
 }
 
 bool
-linux_waitqueue_active(wait_queue_head_t *wqh)
+drmkpi_waitqueue_active(wait_queue_head_t *wqh)
 {
 	bool ret;
 
@@ -254,7 +254,7 @@ linux_waitqueue_active(wait_queue_head_t *wqh)
 }
 
 int
-linux_wait_event_common(wait_queue_head_t *wqh, wait_queue_t *wq, int timeout,
+drmkpi_wait_event_common(wait_queue_head_t *wqh, wait_queue_t *wq, int timeout,
     unsigned int state, spinlock_t *lock)
 {
 	struct task_struct *task;
@@ -278,7 +278,7 @@ linux_wait_event_common(wait_queue_head_t *wqh, wait_queue_t *wq, int timeout,
 	PHOLD(task->task_thread->td_proc);
 	sleepq_lock(task);
 	if (atomic_read(&task->state) != TASK_WAKING) {
-		ret = linux_add_to_sleepqueue(task, task, "wevent", timeout,
+		ret = drmkpi_add_to_sleepqueue(task, task, "wevent", timeout,
 		    state);
 	} else {
 		sleepq_release(task);
@@ -292,7 +292,7 @@ linux_wait_event_common(wait_queue_head_t *wqh, wait_queue_t *wq, int timeout,
 }
 
 int
-linux_schedule_timeout(int timeout)
+drmkpi_schedule_timeout(int timeout)
 {
 	struct task_struct *task;
 	int ret;
@@ -312,7 +312,7 @@ linux_schedule_timeout(int timeout)
 	sleepq_lock(task);
 	state = atomic_read(&task->state);
 	if (state != TASK_WAKING) {
-		ret = linux_add_to_sleepqueue(task, task, "sched", timeout,
+		ret = drmkpi_add_to_sleepqueue(task, task, "sched", timeout,
 		    state);
 	} else {
 		sleepq_release(task);
@@ -351,14 +351,14 @@ wake_up_sleepers(void *wchan)
 #define	bit_to_wchan(word, bit)	((void *)(((uintptr_t)(word) << 6) | (bit)))
 
 void
-linux_wake_up_bit(void *word, int bit)
+drmkpi_wake_up_bit(void *word, int bit)
 {
 
 	wake_up_sleepers(bit_to_wchan(word, bit));
 }
 
 int
-linux_wait_on_bit_timeout(unsigned long *word, int bit, unsigned int state,
+drmkpi_wait_on_bit_timeout(unsigned long *word, int bit, unsigned int state,
     int timeout)
 {
 	struct task_struct *task;
@@ -381,7 +381,7 @@ linux_wait_on_bit_timeout(unsigned long *word, int bit, unsigned int state,
 			break;
 		}
 		set_task_state(task, state);
-		ret = linux_add_to_sleepqueue(wchan, task, "wbit", timeout,
+		ret = drmkpi_add_to_sleepqueue(wchan, task, "wbit", timeout,
 		    state);
 		if (ret != 0)
 			break;
@@ -392,14 +392,14 @@ linux_wait_on_bit_timeout(unsigned long *word, int bit, unsigned int state,
 }
 
 void
-linux_wake_up_atomic_t(atomic_t *a)
+drmkpi_wake_up_atomic_t(atomic_t *a)
 {
 
 	wake_up_sleepers(a);
 }
 
 int
-linux_wait_on_atomic_t(atomic_t *a, unsigned int state)
+drmkpi_wait_on_atomic_t(atomic_t *a, unsigned int state)
 {
 	struct task_struct *task;
 	void *wchan;
@@ -415,7 +415,7 @@ linux_wait_on_atomic_t(atomic_t *a, unsigned int state)
 			break;
 		}
 		set_task_state(task, state);
-		ret = linux_add_to_sleepqueue(wchan, task, "watomic", 0, state);
+		ret = drmkpi_add_to_sleepqueue(wchan, task, "watomic", 0, state);
 		if (ret != 0)
 			break;
 	}
@@ -425,7 +425,7 @@ linux_wait_on_atomic_t(atomic_t *a, unsigned int state)
 }
 
 bool
-linux_wake_up_state(struct task_struct *task, unsigned int state)
+drmkpi_wake_up_state(struct task_struct *task, unsigned int state)
 {
 
 	return (wake_up_task(task, state) != 0);

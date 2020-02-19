@@ -121,21 +121,21 @@ put_task_struct(struct task_struct *task)
 
 #define	need_resched() (curthread->td_flags & TDF_NEEDRESCHED)
 
-bool linux_signal_pending(struct task_struct *task);
-bool linux_fatal_signal_pending(struct task_struct *task);
-bool linux_signal_pending_state(long state, struct task_struct *task);
-void linux_send_sig(int signo, struct task_struct *task);
+bool drmkpi_signal_pending(struct task_struct *task);
+bool drmkpi_fatal_signal_pending(struct task_struct *task);
+bool drmkpi_signal_pending_state(long state, struct task_struct *task);
+void drmkpi_send_sig(int signo, struct task_struct *task);
 
-#define	signal_pending(task)		linux_signal_pending(task)
-#define	fatal_signal_pending(task)	linux_fatal_signal_pending(task)
+#define	signal_pending(task)		drmkpi_signal_pending(task)
+#define	fatal_signal_pending(task)	drmkpi_fatal_signal_pending(task)
 #define	signal_pending_state(state, task)		\
-	linux_signal_pending_state(state, task)
+	drmkpi_signal_pending_state(state, task)
 #define	send_sig(signo, task, priv) do {		\
 	CTASSERT((priv) == 0);				\
-	linux_send_sig(signo, task);			\
+	drmkp_send_sig(signo, task);			\
 } while (0)
 
-int linux_schedule_timeout(int timeout);
+int drmkpi_schedule_timeout(int timeout);
 
 static inline void
 linux_schedule_save_interrupt_value(struct task_struct *task, int value)
@@ -152,9 +152,9 @@ linux_schedule_get_interrupt_value(struct task_struct *task)
 }
 
 #define	schedule()					\
-	(void)linux_schedule_timeout(MAX_SCHEDULE_TIMEOUT)
+	(void)drmkpi_schedule_timeout(MAX_SCHEDULE_TIMEOUT)
 #define	schedule_timeout(timeout)			\
-	linux_schedule_timeout(timeout)
+	drmkpi_schedule_timeout(timeout)
 #define	schedule_timeout_killable(timeout)		\
 	schedule_timeout_interruptible(timeout)
 #define	schedule_timeout_interruptible(timeout) ({	\
