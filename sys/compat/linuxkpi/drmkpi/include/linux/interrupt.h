@@ -56,9 +56,11 @@ struct irq_ent {
 static inline int
 linux_irq_rid(struct device *dev, unsigned int irq)
 {
-	if (irq == dev->irq)
+	/* check for MSI- or MSIX- interrupt */
+	if (irq >= dev->irq_start && irq < dev->irq_end)
+		return (irq - dev->irq_start + 1);
+	else
 		return (0);
-	return irq - dev->msix + 1;
 }
 
 extern void linux_irq_handler(void *);
@@ -191,6 +193,9 @@ typedef void tasklet_func_t(unsigned long);
 struct tasklet_struct {
 	TAILQ_ENTRY(tasklet_struct) entry;
 	tasklet_func_t *func;
+	/* Our "state" implementation is different. Avoid same name as Linux. */
+	volatile u_int tasklet_state;
+	atomic_t count;
 	unsigned long data;
 };
 
@@ -205,5 +210,8 @@ extern void tasklet_init(struct tasklet_struct *, tasklet_func_t *,
     unsigned long data);
 extern void tasklet_enable(struct tasklet_struct *);
 extern void tasklet_disable(struct tasklet_struct *);
+extern int tasklet_trylock(struct tasklet_struct *);
+extern void tasklet_unlock(struct tasklet_struct *);
+extern void tasklet_unlock_wait(struct tasklet_struct *ts);
 
 #endif	/* _LINUX_INTERRUPT_H_ */
