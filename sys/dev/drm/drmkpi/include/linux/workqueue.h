@@ -92,7 +92,7 @@ struct delayed_work {
 	struct delayed_work name;					\
 	static void name##_init(void *arg)				\
 	{								\
-		linux_init_delayed_work(&name, fn);			\
+		drmkpi_init_delayed_work(&name, fn);			\
 	}								\
 	SYSINIT(name, SI_SUB_LOCK, SI_ORDER_SECOND, name##_init, NULL)
 
@@ -107,17 +107,17 @@ do {									\
 	(work)->func = (fn);						\
 	(work)->work_queue = NULL;					\
 	atomic_set(&(work)->state, 0);					\
-	TASK_INIT(&(work)->work_task, 0, linux_work_fn, (work));	\
+	TASK_INIT(&(work)->work_task, 0, drmkpi_work_fn, (work));	\
 } while (0)
 
 #define	INIT_WORK_ONSTACK(work, fn) \
 	INIT_WORK(work, fn)
 
 #define	INIT_DELAYED_WORK(dwork, fn) \
-	linux_init_delayed_work(dwork, fn)
+	drmkpi_init_delayed_work(dwork, fn)
 
 #define	INIT_DELAYED_WORK_ONSTACK(dwork, fn) \
-	linux_init_delayed_work(dwork, fn)
+	drmkpi_init_delayed_work(dwork, fn)
 
 #define	INIT_DEFERRABLE_WORK(dwork, fn) \
 	INIT_DELAYED_WORK(dwork, fn)
@@ -126,37 +126,37 @@ do {									\
 	taskqueue_drain_all(system_wq->taskqueue)
 
 #define	queue_work(wq, work) \
-	linux_queue_work_on(WORK_CPU_UNBOUND, wq, work)
+	drmkpi_queue_work_on(WORK_CPU_UNBOUND, wq, work)
 
 #define	schedule_work(work) \
-	linux_queue_work_on(WORK_CPU_UNBOUND, system_wq, work)
+	drmkpi_queue_work_on(WORK_CPU_UNBOUND, system_wq, work)
 
 #define	queue_delayed_work(wq, dwork, delay) \
-	linux_queue_delayed_work_on(WORK_CPU_UNBOUND, wq, dwork, delay)
+	drmkpi_queue_delayed_work_on(WORK_CPU_UNBOUND, wq, dwork, delay)
 
 #define	schedule_delayed_work_on(cpu, dwork, delay) \
-	linux_queue_delayed_work_on(cpu, system_wq, dwork, delay)
+	drmkpi_queue_delayed_work_on(cpu, system_wq, dwork, delay)
 
 #define	queue_work_on(cpu, wq, work) \
-	linux_queue_work_on(cpu, wq, work)
+	drmkpi_queue_work_on(cpu, wq, work)
 
 #define	schedule_delayed_work(dwork, delay) \
-	linux_queue_delayed_work_on(WORK_CPU_UNBOUND, system_wq, dwork, delay)
+	drmkpi_queue_delayed_work_on(WORK_CPU_UNBOUND, system_wq, dwork, delay)
 
 #define	queue_delayed_work_on(cpu, wq, dwork, delay) \
-	linux_queue_delayed_work_on(cpu, wq, dwork, delay)
+	drmkpi_queue_delayed_work_on(cpu, wq, dwork, delay)
 
 #define	create_singlethread_workqueue(name) \
-	linux_create_workqueue_common(name, 1)
+	drmkpi_create_workqueue_common(name, 1)
 
 #define	create_workqueue(name) \
-	linux_create_workqueue_common(name, mp_ncpus)
+	drmkpi_create_workqueue_common(name, mp_ncpus)
 
 #define	alloc_ordered_workqueue(name, flags) \
-	linux_create_workqueue_common(name, 1)
+	drmkpi_create_workqueue_common(name, 1)
 
 #define	alloc_workqueue(name, flags, max_active) \
-	linux_create_workqueue_common(name, max_active)
+	drmkpi_create_workqueue_common(name, max_active)
 
 #define	flush_workqueue(wq) \
 	taskqueue_drain_all((wq)->taskqueue)
@@ -169,35 +169,35 @@ do {									\
 
 #define	mod_delayed_work(wq, dwork, delay) ({		\
 	bool __retval;					\
-	__retval = linux_cancel_delayed_work(dwork);	\
-	linux_queue_delayed_work_on(WORK_CPU_UNBOUND,	\
+	__retval = drmkpi_cancel_delayed_work(dwork);	\
+	drmkpi_queue_delayed_work_on(WORK_CPU_UNBOUND,	\
 	    wq, dwork, delay);				\
 	__retval;					\
 })
 
 #define	delayed_work_pending(dwork) \
-	linux_work_pending(&(dwork)->work)
+	drmkpi_work_pending(&(dwork)->work)
 
 #define	cancel_delayed_work(dwork) \
-	linux_cancel_delayed_work(dwork)
+	drmkpi_cancel_delayed_work(dwork)
 
 #define	cancel_work_sync(work) \
-	linux_cancel_work_sync(work)
+	drmkpi_cancel_work_sync(work)
 
 #define	cancel_delayed_work_sync(dwork) \
-	linux_cancel_delayed_work_sync(dwork)
+	drmkpi_cancel_delayed_work_sync(dwork)
 
 #define	flush_work(work) \
-	linux_flush_work(work)
+	drmkpi_flush_work(work)
 
 #define	flush_delayed_work(dwork) \
-	linux_flush_delayed_work(dwork)
+	drmkpi_flush_delayed_work(dwork)
 
 #define	work_pending(work) \
-	linux_work_pending(work)
+	drmkpi_work_pending(work)
 
 #define	work_busy(work) \
-	linux_work_busy(work)
+	drmkpi_work_busy(work)
 
 #define	destroy_work_on_stack(work) \
 	do { } while (0)
@@ -206,10 +206,10 @@ do {									\
 	do { } while (0)
 
 #define	destroy_workqueue(wq) \
-	linux_destroy_workqueue(wq)
+	drmkpi_destroy_workqueue(wq)
 
 #define	current_work() \
-	linux_current_work()
+	drmkpi_current_work()
 
 /* prototypes */
 
@@ -219,21 +219,21 @@ extern struct workqueue_struct *system_unbound_wq;
 extern struct workqueue_struct *system_highpri_wq;
 extern struct workqueue_struct *system_power_efficient_wq;
 
-extern void linux_init_delayed_work(struct delayed_work *, work_func_t);
-extern void linux_work_fn(void *, int);
-extern void linux_delayed_work_fn(void *, int);
-extern struct workqueue_struct *linux_create_workqueue_common(const char *, int);
-extern void linux_destroy_workqueue(struct workqueue_struct *);
-extern bool linux_queue_work_on(int cpu, struct workqueue_struct *, struct work_struct *);
-extern bool linux_queue_delayed_work_on(int cpu, struct workqueue_struct *,
+extern void drmkpi_init_delayed_work(struct delayed_work *, work_func_t);
+extern void drmkpi_work_fn(void *, int);
+extern void drmkpi_delayed_work_fn(void *, int);
+extern struct workqueue_struct *drmkpi_create_workqueue_common(const char *, int);
+extern void drmkpi_destroy_workqueue(struct workqueue_struct *);
+extern bool drmkpi_queue_work_on(int cpu, struct workqueue_struct *, struct work_struct *);
+extern bool drmkpi_queue_delayed_work_on(int cpu, struct workqueue_struct *,
     struct delayed_work *, unsigned delay);
-extern bool linux_cancel_delayed_work(struct delayed_work *);
-extern bool linux_cancel_work_sync(struct work_struct *);
-extern bool linux_cancel_delayed_work_sync(struct delayed_work *);
-extern bool linux_flush_work(struct work_struct *);
-extern bool linux_flush_delayed_work(struct delayed_work *);
-extern bool linux_work_pending(struct work_struct *);
-extern bool linux_work_busy(struct work_struct *);
-extern struct work_struct *linux_current_work(void);
+extern bool drmkpi_cancel_delayed_work(struct delayed_work *);
+extern bool drmkpi_cancel_work_sync(struct work_struct *);
+extern bool drmkpi_cancel_delayed_work_sync(struct delayed_work *);
+extern bool drmkpi_flush_work(struct work_struct *);
+extern bool drmkpi_flush_delayed_work(struct delayed_work *);
+extern bool drmkpi_work_pending(struct work_struct *);
+extern bool drmkpi_work_busy(struct work_struct *);
+extern struct work_struct *drmkpi_current_work(void);
 
 #endif					/* _LINUX_WORKQUEUE_H_ */
