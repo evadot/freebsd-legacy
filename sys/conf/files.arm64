@@ -470,7 +470,7 @@ dev/drm/core/drm_modeset_helper.c		optional drm compile-with "${DRM_C}"
 dev/drm/core/drm_modeset_lock.c			optional drm compile-with "${DRM_C}"
 dev/drm/core/drm_panel.c			optional drm compile-with "${DRM_C}"
 dev/drm/core/drm_panel_orientation_quirks.c	optional drm compile-with "${DRM_C}"
-dev/drm/core/drm_pci.c				optional drm compile-with "${DRM_C}"
+#dev/drm/core/drm_pci.c				optional drm compile-with "${DRM_C}" # Need CONFIG_PCI and drmkpi pci support
 dev/drm/core/drm_plane.c			optional drm compile-with "${DRM_C}"
 dev/drm/core/drm_plane_helper.c			optional drm compile-with "${DRM_C}"
 dev/drm/core/drm_prime.c			optional drm compile-with "${DRM_C}"
