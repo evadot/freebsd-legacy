@@ -41,37 +41,37 @@ static TAILQ_HEAD(, ww_mutex_thread) ww_mutex_head;
 static struct mtx ww_mutex_global;
 
 static void
-linux_ww_init(void *arg)
+drmkpi_ww_init(void *arg)
 {
 	TAILQ_INIT(&ww_mutex_head);
-	mtx_init(&ww_mutex_global, "lkpi-ww-mtx", NULL, MTX_DEF);
+	mtx_init(&ww_mutex_global, "dkpi-ww-mtx", NULL, MTX_DEF);
 }
 
-SYSINIT(ww_init, SI_SUB_LOCK, SI_ORDER_SECOND, linux_ww_init, NULL);
+SYSINIT(ww_init, SI_SUB_LOCK, SI_ORDER_SECOND, drmkpi_ww_init, NULL);
 
 static void
-linux_ww_uninit(void *arg)
+drmkpi_ww_uninit(void *arg)
 {
 	mtx_destroy(&ww_mutex_global);
 }
 
-SYSUNINIT(ww_uninit, SI_SUB_LOCK, SI_ORDER_SECOND, linux_ww_uninit, NULL);
+SYSUNINIT(ww_uninit, SI_SUB_LOCK, SI_ORDER_SECOND, drmkpi_ww_uninit, NULL);
 
 static inline void
-linux_ww_lock(void)
+drmkpi_ww_lock(void)
 {
 	mtx_lock(&ww_mutex_global);
 }
 
 static inline void
-linux_ww_unlock(void)
+drmkpi_ww_unlock(void)
 {
 	mtx_unlock(&ww_mutex_global);
 }
 
 /* lock a mutex with deadlock avoidance */
 int
-linux_ww_mutex_lock_sub(struct ww_mutex *lock, int catch_signal)
+drmkpi_ww_mutex_lock_sub(struct ww_mutex *lock, int catch_signal)
 {
 	struct task_struct *task;
 	struct ww_mutex_thread entry;
@@ -80,7 +80,7 @@ linux_ww_mutex_lock_sub(struct ww_mutex *lock, int catch_signal)
 
 	task = current;
 
-	linux_ww_lock();
+	drmkpi_ww_lock();
 	if (unlikely(sx_try_xlock(&lock->base.sx) == 0)) {
 		entry.thread = curthread;
 		entry.lock = lock;
@@ -126,23 +126,23 @@ done:
 		if ((struct thread *)SX_OWNER(lock->base.sx.sx_lock) == NULL)
 			cv_signal(&lock->condvar);
 	}
-	linux_ww_unlock();
+	drmkpi_ww_unlock();
 	return (retval);
 }
 
 void
-linux_ww_mutex_unlock_sub(struct ww_mutex *lock)
+drmkpi_ww_mutex_unlock_sub(struct ww_mutex *lock)
 {
 	/* protect ww_mutex ownership change */
-	linux_ww_lock();
+	drmkpi_ww_lock();
 	sx_xunlock(&lock->base.sx);
 	/* wakeup a lock waiter, if any */
 	cv_signal(&lock->condvar);
-	linux_ww_unlock();
+	drmkpi_ww_unlock();
 }
 
 int
-linux_mutex_lock_interruptible(mutex_t *m)
+drmkpi_mutex_lock_interruptible(mutex_t *m)
 {
 	int error;
 
