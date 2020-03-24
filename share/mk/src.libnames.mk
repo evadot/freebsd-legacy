@@ -134,7 +134,6 @@ _LIBRARIES=	\
 		kiconv \
 		krb5 \
 		kvm \
-		l \
 		lzma \
 		m \
 		magic \
@@ -192,7 +191,6 @@ _LIBRARIES=	\
 		wind \
 		wrap \
 		xo \
-		y \
 		ypclnt \
 		z \
 		zfs_core \
