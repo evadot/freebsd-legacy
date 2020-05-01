@@ -82,10 +82,6 @@ __FBSDID("$FreeBSD$");
 #include <linux/preempt.h>
 #include <linux/rbtree.h>
 
-#if defined(__i386__) || defined(__amd64__)
-#include <asm/smp.h>
-#endif
-
 SYSCTL_NODE(_compat, OID_AUTO, drmkpi, CTLFLAG_RW, 0, "DRMKPI parameters");
 
 MALLOC_DEFINE(M_KMALLOC, "drmkpi", "DRM kmalloc compat");
