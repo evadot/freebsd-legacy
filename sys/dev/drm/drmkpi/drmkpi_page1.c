@@ -167,35 +167,3 @@ retry:
 		vm_object_deallocate(devobj);
 	}
 }
-
-#if defined(__i386__) || defined(__amd64__)
-int
-set_pages_array_wb(struct page **pages, int addrinarray)
-{
-	int i;
-
-	for (i = 0; i < addrinarray; i++)
-		set_pages_wb(pages[i], 1);
-	return (0);
-}
-
-int
-set_pages_array_wc(struct page **pages, int addrinarray)
-{
-	int i;
-
-	for (i = 0; i < addrinarray; i++)
-		set_pages_wc(pages[i], 1);
-	return (0);
-}
-
-int
-set_pages_array_uc(struct page **pages, int addrinarray)
-{
-	int i;
-
-	for (i = 0; i < addrinarray; i++)
-		set_pages_uc(pages[i], 1);
-	return (0);
-}
-#endif
