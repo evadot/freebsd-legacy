@@ -105,7 +105,7 @@ drm_fstub_read(struct file *file, struct uio *uio, struct ucred *cred,
 	} else {
 		rv = -bytes;
 	}
-	foffset_unlock_uio(file, uio, flags | FOF_NOLOCK | FOF_NEXTOFF);
+	foffset_unlock_uio(file, uio, flags | FOF_NOLOCK | FOF_NEXTOFF_R);
 	dev_relthread(cdev, ref);
 	return (rv);
 
@@ -152,7 +152,7 @@ drm_fstub_write(struct file *file, struct uio *uio, struct ucred *cred,
 	} else {
 		rv = -bytes;
 	}
-	foffset_unlock_uio(file, uio, flags | FOF_NOLOCK | FOF_NEXTOFF);
+	foffset_unlock_uio(file, uio, flags | FOF_NOLOCK | FOF_NEXTOFF_W);
 	dev_relthread(cdev, ref);
 	return (rv);
 
