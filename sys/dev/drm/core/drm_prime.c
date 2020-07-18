@@ -982,5 +982,5 @@ void drm_prime_init_file_private(struct drm_prime_file_private *prime_fpriv)
 void drm_prime_destroy_file_private(struct drm_prime_file_private *prime_fpriv)
 {
 	/* by now drm_gem_release should've made sure the list is empty */
-	WARN_ON(!RB_EMPTY_ROOT(&prime_fpriv->dmabufs));
+	/* WARN_ON(!RB_EMPTY_ROOT(&prime_fpriv->dmabufs)); */
 }
