@@ -25,14 +25,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * $FreeBSD$
  */
 #ifndef	_LINUX_RBTREE_H_
 #define	_LINUX_RBTREE_H_
 
-/* for printf */
-#include <sys/types.h>
-#include <sys/systm.h>
-
+#include <sys/stddef.h>
 #include <sys/tree.h>
 
 struct rb_node {
@@ -50,8 +49,8 @@ struct rb_root {
 };
 
 struct rb_root_cached {
-	struct	rb_root	rb_root;
-	struct	rb_node	*rb_node;
+	struct  rb_root rb_root;
+	struct  rb_node *rb_node;
 };
 
 /*
@@ -62,19 +61,13 @@ int panic_cmp(struct rb_node *one, struct rb_node *two);
 RB_HEAD(linux_root, rb_node);
 RB_PROTOTYPE(linux_root, rb_node, __entry, panic_cmp);
 
-#define	rb_parent(r)	RB_PARENT(r, __entry)
-#define	rb_color(r)	RB_COLOR(r, __entry)
-#define	rb_is_red(r)	(rb_color(r) == RB_RED)
-#define	rb_is_black(r)	(rb_color(r) == RB_BLACK)
-#define	rb_set_parent(r, p)	rb_parent((r)) = (p)
-#define	rb_set_color(r, c)	rb_color((r)) = (c)
 #define	rb_entry(ptr, type, member)	container_of(ptr, type, member)
 #define	rb_entry_safe(ptr, type, member) \
 	(ptr ? rb_entry(ptr, type, member) : NULL)
 
-#define RB_EMPTY_ROOT(root)	((root)->rb_node == NULL)
-#define RB_EMPTY_NODE(node)     (rb_parent(node) == node)
-#define RB_CLEAR_NODE(node)     (rb_set_parent(node, node))
+#define RB_EMPTY_ROOT(root)     RB_EMPTY((struct linux_root *)root)
+#define RB_EMPTY_NODE(node)     (RB_PARENT(node, __entry) == node)
+#define RB_CLEAR_NODE(node)     RB_SET_PARENT(node, node, __entry)
 
 #define	rb_insert_color(node, root)					\
 	linux_root_RB_INSERT_COLOR((struct linux_root *)(root), (node))
@@ -82,7 +75,7 @@ RB_PROTOTYPE(linux_root, rb_node, __entry, panic_cmp);
 	linux_root_RB_INSERT_COLOR((struct linux_root *)(root), (node))
 #define	rb_erase(node, root)						\
 	linux_root_RB_REMOVE((struct linux_root *)(root), (node))
-#define	rb_erase_cached(node, root)						\
+#define	rb_erase_cached(node, root)					\
 	linux_root_RB_REMOVE((struct linux_root *)(root), (node))
 #define	rb_next(node)	RB_NEXT(linux_root, NULL, (node))
 #define	rb_prev(node)	RB_PREV(linux_root, NULL, (node))
@@ -90,47 +83,11 @@ RB_PROTOTYPE(linux_root, rb_node, __entry, panic_cmp);
 #define	rb_first_cached(root)	RB_MIN(linux_root, (struct linux_root *)(root))
 #define	rb_last(root)	RB_MAX(linux_root, (struct linux_root *)(root))
 
-static inline struct rb_node *
-__rb_deepest_left(struct rb_node *node)
-{
-	struct rb_node *parent = NULL;
-	while (node) {
-		parent = node;
-		if (RB_LEFT(node, __entry))
-			node = RB_LEFT(node, __entry);
-		else
-			node = RB_RIGHT(node, __entry);
-	}
-	return parent;	
-}
-
-static inline struct rb_node *
-rb_next_postorder(const struct rb_node *node)
-{
-	struct rb_node *parent = RB_PARENT(node, __entry);
-	/* left -> right, right -> root */
-	if (parent != NULL &&
-	    (node == RB_LEFT(parent, __entry)) &&
-	    (RB_RIGHT(parent, __entry)))
-		return __rb_deepest_left(RB_RIGHT(parent, __entry));
-	else
-		return parent;
-}
-
-#define	rbtree_postorder_for_each_entry_safe(x, y, head, member)	\
-	for ((x) = rb_entry_safe(__rb_deepest_left((head)->rb_node),	\
-	    __typeof(*x), member);					\
-	    ((x) != NULL) && ((y) =					\
-	    rb_entry_safe(rb_next_postorder(&x->member), typeof(*x), member), 1); \
-	    (x) = (y))
-
 static inline void
 rb_link_node(struct rb_node *node, struct rb_node *parent,
     struct rb_node **rb_link)
 {
-	rb_set_parent(node, parent);
-	rb_set_color(node, RB_RED);
-	node->__entry.rbe_left = node->__entry.rbe_right = NULL;
+	RB_SET(node, parent, __entry);
 	*rb_link = node;
 }
 
@@ -138,26 +95,18 @@ static inline void
 rb_replace_node(struct rb_node *victim, struct rb_node *new,
     struct rb_root *root)
 {
-	struct rb_node *p;
 
-	p = rb_parent(victim);
-	if (p) {
-		if (p->rb_left == victim)
-			p->rb_left = new;
-		else
-			p->rb_right = new;
-	} else
-		root->rb_node = new;
+	RB_SWAP_CHILD((struct linux_root *)root, victim, new, __entry);
 	if (victim->rb_left)
-		rb_set_parent(victim->rb_left, new);
+		RB_SET_PARENT(victim->rb_left, new, __entry);
 	if (victim->rb_right)
-		rb_set_parent(victim->rb_right, new);
+		RB_SET_PARENT(victim->rb_right, new, __entry);
 	*new = *victim;
 }
 
 static inline void
 rb_replace_node_cached(struct rb_node *victim, struct rb_node *new,
-    struct rb_root_cached *root)
+  struct rb_root_cached *root)
 {
 
 	if (root->rb_node == victim)
@@ -168,37 +117,5 @@ rb_replace_node_cached(struct rb_node *victim, struct rb_node *new,
 #undef RB_ROOT
 #define RB_ROOT		(struct rb_root) { NULL }
 #define RB_ROOT_CACHED	(struct rb_root_cached) { {NULL, }, NULL }
-
-struct interval_tree_node {
-	struct rb_node rb;
-	unsigned long start;
-	unsigned long last;
-};
-
-static inline struct interval_tree_node *
-interval_tree_iter_first(struct rb_root *root,
-    unsigned long start, unsigned long last)
-{
-#ifdef DRMDEBUG
-	printf("%s: stub start: 0x%lx last: 0x%lx\n", __func__, start, last);
-#endif
-	return NULL;
-}
-
-static inline void
-interval_tree_insert(struct interval_tree_node *node, struct rb_root *root)
-{
-#ifdef DRMDEBUG
-	printf("%s: stub start: 0x%lx last: 0x%lx\n", __func__, node->start, node->last);
-#endif
-}
-
-static inline void
-interval_tree_remove(struct interval_tree_node *node, struct rb_root *root)
-{
-#ifdef DRMDEBUG
-	printf("%s: stub start: 0x%lx last: 0x%lx\n", __func__, node->start, node->last);
-#endif
-}
 
 #endif	/* _LINUX_RBTREE_H_ */
