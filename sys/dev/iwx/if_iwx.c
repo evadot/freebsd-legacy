@@ -6313,8 +6313,8 @@ static driver_t iwx_pci_driver = {
 static devclass_t iwx_devclass;
 
 DRIVER_MODULE(iwx, pci, iwx_pci_driver, iwx_devclass, NULL, NULL);
-MODULE_PNP_INFO("U16:device;P:#;T:vendor=0x8086", pci, iwx_pci_driver,
-    iwx_devices, nitems(iwx_devices));
+/* MODULE_PNP_INFO("U16:device;P:#;T:vendor=0x8086", pci, iwx_pci_driver, */
+/*     iwx_devices, nitems(iwx_devices)); */
 MODULE_DEPEND(iwx, firmware, 1, 1, 1);
 MODULE_DEPEND(iwx, pci, 1, 1, 1);
 MODULE_DEPEND(iwx, wlan, 1, 1, 1);
