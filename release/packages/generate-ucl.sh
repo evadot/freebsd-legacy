@@ -44,6 +44,7 @@ main() {
 		runtime)
 			outname="runtime"
 			uclfile="${uclfile}"
+			pkgdeps="clibs"
 			;;
 		runtime_manuals)
 			outname="${origname}"
