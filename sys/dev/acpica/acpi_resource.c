@@ -645,9 +645,11 @@ acpi_res_set_irq(device_t dev, void *context, uint8_t *irq, int count,
     struct acpi_res_context	*cp = (struct acpi_res_context *)context;
     rman_res_t intr;
 
+    printf("%s: called\n", __func__);
     if (cp == NULL || irq == NULL)
 	return;
 
+    printf("%s: count=%d\n", __func__, count);
     /* This implements no resource relocation. */
     if (count != 1)
 	return;
@@ -662,16 +664,16 @@ acpi_res_set_ext_irq(device_t dev, void *context, uint32_t *irq, int count,
 {
     struct acpi_res_context	*cp = (struct acpi_res_context *)context;
     rman_res_t intr;
+    int i;
 
     if (cp == NULL || irq == NULL)
 	return;
 
     /* This implements no resource relocation. */
-    if (count != 1)
-	return;
-
-    intr = *irq;
-    bus_set_resource(dev, SYS_RES_IRQ, cp->ar_nirq++, intr, 1);
+    for (i = 0; i < count; i++) {
+	intr = irq[i];
+	bus_set_resource(dev, SYS_RES_IRQ, cp->ar_nirq++, intr, 1);
+    }
 }
 
 static void
