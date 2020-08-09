@@ -85,6 +85,10 @@ static const struct sdhci_acpi_device {
 	{ "AMDI0040",	0, "AMD eMMC 5.0 Controller",
 	    SDHCI_QUIRK_32BIT_DMA_SIZE |
 	    SDHCI_QUIRK_MMC_HS400_IF_CAN_SDR104 },
+	{ "ARASAN",	0, "ArasanSD 3.0 SD Host Controller",
+	  SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
+	    SDHCI_QUIRK_BROKEN_TIMEOUT_VAL | SDHCI_QUIRK_DONT_SET_HISPD_BIT |
+	    SDHCI_QUIRK_MISSING_CAPS },
 	{ NULL, 0, NULL, 0}
 };
 
@@ -94,6 +98,7 @@ static char *sdhci_ids[] = {
 	"80865ACA",
 	"80865ACC",
 	"AMDI0040",
+	"ARASAN",
 	NULL
 };
 
