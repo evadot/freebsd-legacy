@@ -71,7 +71,6 @@ __FBSDID("$FreeBSD$");
 
 #include <dev/mii/mii.h>
 #include <dev/mii/miivar.h>
-#include <dev/mii/mii_fdt.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -80,6 +79,8 @@ __FBSDID("$FreeBSD$");
 #ifdef ICMPV6_HACK
 #include <netinet/icmp6.h>
 #endif
+
+#include "if_genet.h"
 
 #include "syscon_if.h"
 #include "miibus_if.h"
@@ -93,34 +94,9 @@ __FBSDID("$FreeBSD$");
 #define	GEN_ASSERT_LOCKED(sc)	mtx_assert(&(sc)->mtx, MA_OWNED)
 #define	GEN_ASSERT_UNLOCKED(sc)	mtx_assert(&(sc)->mtx, MA_NOTOWNED)
 
-#define	TX_DESC_COUNT		GENET_DMA_DESC_COUNT
-#define	RX_DESC_COUNT		GENET_DMA_DESC_COUNT
-
-#define	TX_NEXT(n, count)		(((n) + 1) & ((count) - 1))
-#define	RX_NEXT(n, count)		(((n) + 1) & ((count) - 1))
-
-
-#define	TX_MAX_SEGS		20
-
 /* Maximum number of mbufs to send to if_input */
 static int gen_rx_batch = 16 /* RX_BATCH_DEFAULT */;
 TUNABLE_INT("hw.gen.rx_batch", &gen_rx_batch);
-
-static struct ofw_compat_data compat_data[] = {
-	{ "brcm,genet-v1",		1 },
-	{ "brcm,genet-v2",		2 },
-	{ "brcm,genet-v3",		3 },
-	{ "brcm,genet-v4",		4 },
-	{ "brcm,genet-v5",		5 },
-	{ NULL,				0 }
-};
-
-enum {
-	_RES_MAC,		/* what to call this? */
-	_RES_IRQ1,
-	_RES_IRQ2,
-	_RES_NITEMS
-};
 
 static struct resource_spec gen_spec[] = {
 	{ SYS_RES_MEMORY,	0,	RF_ACTIVE },
@@ -129,74 +105,12 @@ static struct resource_spec gen_spec[] = {
 	{ -1, 0 }
 };
 
-/* structure per ring entry */
-struct gen_ring_ent {
-	bus_dmamap_t		map;
-	struct mbuf		*mbuf;
-};
-
-struct tx_queue {
-	int			hwindex;		/* hardware index */
-	int			nentries;
-	u_int			queued;			/* or avail? */
-	u_int			cur;
-	u_int			next;
-	u_int			prod_idx;
-	u_int			cons_idx;
-	struct gen_ring_ent	*entries;
-};
-
-struct rx_queue {
-	int			hwindex;		/* hardware index */
-	int			nentries;
-	u_int			cur;
-	u_int			prod_idx;
-	u_int			cons_idx;
-	struct gen_ring_ent	*entries;
-};
-
-struct gen_softc {
-	struct resource		*res[_RES_NITEMS];
-	struct mtx		mtx;
-	if_t			ifp;
-	device_t		dev;
-	device_t		miibus;
-	mii_contype_t		phy_mode;
-
-	struct callout		stat_ch;
-	struct task		link_task;
-	void			*ih;
-	void			*ih2;
-	int			type;
-	int			if_flags;
-	int			link;
-	bus_dma_tag_t		tx_buf_tag;
-	/*
-	 * The genet chip has multiple queues for transmit and receive.
-	 * This driver uses only one (queue 16, the default), but is cast
-	 * with multiple rings.  The additional rings are used for different
-	 * priorities.
-	 */
-#define DEF_TXQUEUE	0
-#define NTXQUEUE	1
-	struct tx_queue		tx_queue[NTXQUEUE];
-	struct gen_ring_ent	tx_ring_ent[TX_DESC_COUNT];  /* ring entries */
-
-	bus_dma_tag_t		rx_buf_tag;
-#define DEF_RXQUEUE	0
-#define NRXQUEUE	1
-	struct rx_queue		rx_queue[NRXQUEUE];
-	struct gen_ring_ent	rx_ring_ent[RX_DESC_COUNT];  /* ring entries */
-};
-
 static void gen_init(void *softc);
 static void gen_start(if_t ifp);
-static void gen_destroy(struct gen_softc *sc);
 static int gen_encap(struct gen_softc *sc, struct mbuf **mp);
 static int gen_parse_tx(struct mbuf *m, int csum_flags);
 static int gen_ioctl(if_t ifp, u_long cmd, caddr_t data);
-static int gen_get_phy_mode(device_t dev);
-static bool gen_get_eaddr(device_t dev, struct ether_addr *eaddr);
+static void gen_get_eaddr(struct gen_softc *sc);
 static void gen_set_enaddr(struct gen_softc *sc);
 static void gen_setup_rxfilter(struct gen_softc *sc);
 static void gen_reset(struct gen_softc *sc);
@@ -219,89 +133,67 @@ static void gen_media_status(if_t ifp, struct ifmediareq *ifmr);
 static int gen_media_change(if_t ifp);
 static void gen_tick(void *softc);
 
-static int
-gen_probe(device_t dev)
+/* Generic attach function */
+int
+genet_attach(struct gen_softc *sc)
 {
-	if (!ofw_bus_status_okay(dev))
-		return (ENXIO);
-
-	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
-		return (ENXIO);
-
-	device_set_desc(dev, "RPi4 Gigabit Ethernet");
-	return (BUS_PROBE_DEFAULT);
-}
-
-static int
-gen_attach(device_t dev)
-{
-	struct ether_addr eaddr;
-	struct gen_softc *sc;
 	int major, minor, error, mii_flags;
-	bool eaddr_found;
 
-	sc = device_get_softc(dev);
-	sc->dev = dev;
-	sc->type = ofw_bus_search_compatible(dev, compat_data)->ocd_data;
-
-	if (bus_alloc_resources(dev, gen_spec, sc->res) != 0) {
-		device_printf(dev, "cannot allocate resources for device\n");
+	if (bus_alloc_resources(sc->dev, gen_spec, sc->res) != 0) {
+		device_printf(sc->dev, "cannot allocate resources for device\n");
 		error = ENXIO;
 		goto fail;
 	}
 
 	major = (RD4(sc, GENET_SYS_REV_CTRL) & REV_MAJOR) >> REV_MAJOR_SHIFT;
 	if (major != REV_MAJOR_V5) {
-		device_printf(dev, "version %d is not supported\n", major);
+		device_printf(sc->dev, "version %d is not supported\n", major);
 		error = ENXIO;
 		goto fail;
 	}
 	minor = (RD4(sc, GENET_SYS_REV_CTRL) & REV_MINOR) >> REV_MINOR_SHIFT;
-	device_printf(dev, "GENET version 5.%d phy 0x%04x\n", minor,
+	device_printf(sc->dev, "GENET version 5.%d phy 0x%04x\n", minor,
 		RD4(sc, GENET_SYS_REV_CTRL) & REV_PHY);
 
-	mtx_init(&sc->mtx, device_get_nameunit(dev), MTX_NETWORK_LOCK, MTX_DEF);
+	mtx_init(&sc->mtx, device_get_nameunit(sc->dev), MTX_NETWORK_LOCK, MTX_DEF);
 	callout_init_mtx(&sc->stat_ch, &sc->mtx, 0);
 	TASK_INIT(&sc->link_task, 0, gen_link_task, sc);
 
-	error = gen_get_phy_mode(dev);
-	if (error != 0)
-		goto fail;
-
-	bzero(&eaddr, sizeof(eaddr));
-	eaddr_found = gen_get_eaddr(dev, &eaddr);
+	/* Get the ethernet addr */
+	if (sc->eaddr_found == false)
+		gen_get_eaddr(sc);
 
 	/* reset core */
 	gen_reset(sc);
 
-	gen_dma_disable(dev);
+	gen_dma_disable(sc->dev);
 
 	/* Setup DMA */
 	error = gen_bus_dma_init(sc);
 	if (error != 0) {
-		device_printf(dev, "cannot setup bus dma\n");
+		device_printf(sc->dev, "cannot setup bus dma\n");
 		goto fail;
 	}
 
 	/* Install interrupt handlers */
-	error = bus_setup_intr(dev, sc->res[_RES_IRQ1],
+	error = bus_setup_intr(sc->dev, sc->res[_RES_IRQ1],
 	    INTR_TYPE_NET | INTR_MPSAFE, NULL, gen_intr, sc, &sc->ih);
 	if (error != 0) {
-		device_printf(dev, "cannot setup interrupt handler1\n");
+		device_printf(sc->dev, "cannot setup interrupt handler1\n");
 		goto fail;
 	}
 
-	error = bus_setup_intr(dev, sc->res[_RES_IRQ2],
+	error = bus_setup_intr(sc->dev, sc->res[_RES_IRQ2],
 	    INTR_TYPE_NET | INTR_MPSAFE, NULL, gen_intr2, sc, &sc->ih2);
 	if (error != 0) {
-		device_printf(dev, "cannot setup interrupt handler2\n");
+		device_printf(sc->dev, "cannot setup interrupt handler2\n");
 		goto fail;
 	}
 
 	/* Setup ethernet interface */
 	sc->ifp = if_alloc(IFT_ETHER);
 	if_setsoftc(sc->ifp, sc);
-	if_initname(sc->ifp, device_get_name(dev), device_get_unit(dev));
+	if_initname(sc->ifp, device_get_name(sc->dev), device_get_unit(sc->dev));
 	if_setflags(sc->ifp, IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
 	if_setstartfn(sc->ifp, gen_start);
 	if_setioctlfn(sc->ifp, gen_ioctl);
@@ -330,19 +222,19 @@ gen_attach(device_t dev)
 	default:
 		break;
 	}
-	error = mii_attach(dev, &sc->miibus, sc->ifp, gen_media_change,
+	error = mii_attach(sc->dev, &sc->miibus, sc->ifp, gen_media_change,
 	    gen_media_status, BMSR_DEFCAPMASK, MII_PHY_ANY, MII_OFFSET_ANY,
 	    mii_flags);
 	if (error != 0) {
-		device_printf(dev, "cannot attach PHY\n");
+		device_printf(sc->dev, "cannot attach PHY\n");
 		goto fail;
 	}
 
 	/* If address was not found, create one based on the hostid and name. */
-	if (eaddr_found == 0)
-		ether_gen_addr(sc->ifp, &eaddr);
+	if (sc->eaddr_found == false)
+		ether_gen_addr(sc->ifp, &sc->eaddr);
 	/* Attach ethernet interface */
-	ether_ifattach(sc->ifp, eaddr.octet);
+	ether_ifattach(sc->ifp, sc->eaddr.octet);
 
 fail:
 	if (error)
@@ -351,7 +243,7 @@ fail:
 }
 
 /* Free resources after failed attach.  This is not a complete detach. */
-static void
+void
 gen_destroy(struct gen_softc *sc)
 {
 
@@ -372,53 +264,14 @@ gen_destroy(struct gen_softc *sc)
 	}
 }
 
-static int
-gen_get_phy_mode(device_t dev)
+static void
+gen_get_eaddr(struct gen_softc *sc)
 {
-	struct gen_softc *sc;
-	phandle_t node;
-	mii_contype_t type;
-	int error = 0;
-
-	sc = device_get_softc(dev);
-	node = ofw_bus_get_node(dev);
-	type = mii_fdt_get_contype(node);
-
-	switch (type) {
-	case MII_CONTYPE_RGMII:
-	case MII_CONTYPE_RGMII_ID:
-	case MII_CONTYPE_RGMII_RXID:
-	case MII_CONTYPE_RGMII_TXID:
-		sc->phy_mode = type;
-		break;
-	default:
-		device_printf(dev, "unknown phy-mode '%s'\n",
-		    mii_fdt_contype_to_name(type));
-		error = ENXIO;
-		break;
-	}
-
-	return (error);
-}
-
-static bool
-gen_get_eaddr(device_t dev, struct ether_addr *eaddr)
-{
-	struct gen_softc *sc;
 	uint32_t maclo, machi, val;
-	phandle_t node;
 
-	sc = device_get_softc(dev);
+	if (sc->eaddr_found)
+		return;
 
-	node = ofw_bus_get_node(dev);
-	if (OF_getprop(node, "mac-address", eaddr->octet,
-	    ETHER_ADDR_LEN) != -1 ||
-	    OF_getprop(node, "local-mac-address", eaddr->octet,
-	    ETHER_ADDR_LEN) != -1 ||
-	    OF_getprop(node, "address", eaddr->octet, ETHER_ADDR_LEN) != -1)
-		return (true);
-
-	device_printf(dev, "No Ethernet address found in fdt!\n");
 	maclo = machi = 0;
 
 	val = RD4(sc, GENET_SYS_RBUF_FLUSH_CTRL);
@@ -429,18 +282,18 @@ gen_get_eaddr(device_t dev, struct ether_addr *eaddr)
 
 	if (maclo == 0 && machi == 0) {
 		if (bootverbose)
-			device_printf(dev,
+			device_printf(sc->dev,
 			    "No Ethernet address found in controller\n");
-		return (false);
-	} else {
-		eaddr->octet[0] = maclo & 0xff;
-		eaddr->octet[1] = (maclo >> 8) & 0xff;
-		eaddr->octet[2] = (maclo >> 16) & 0xff;
-		eaddr->octet[3] = (maclo >> 24) & 0xff;
-		eaddr->octet[4] = machi & 0xff;
-		eaddr->octet[5] = (machi >> 8) & 0xff;
-		return (true);
+		return;
 	}
+
+	sc->eaddr.octet[0] = maclo & 0xff;
+	sc->eaddr.octet[1] = (maclo >> 8) & 0xff;
+	sc->eaddr.octet[2] = (maclo >> 16) & 0xff;
+	sc->eaddr.octet[3] = (maclo >> 24) & 0xff;
+	sc->eaddr.octet[4] = machi & 0xff;
+	sc->eaddr.octet[5] = (machi >> 8) & 0xff;
+	sc->eaddr_found = true;
 }
 
 static void
@@ -1570,8 +1423,8 @@ gen_tick(void *softc)
 
 #define	MII_BUSY_RETRY		1000
 
-static int
-gen_miibus_readreg(device_t dev, int phy, int reg)
+int
+genet_miibus_readreg(device_t dev, int phy, int reg)
 {
 	struct gen_softc *sc;
 	int retry, val;
@@ -1601,8 +1454,8 @@ gen_miibus_readreg(device_t dev, int phy, int reg)
 	return (val);
 }
 
-static int
-gen_miibus_writereg(device_t dev, int phy, int reg, int val)
+int
+genet_miibus_writereg(device_t dev, int phy, int reg, int val)
 {
 	struct gen_softc *sc;
 	int retry;
@@ -1694,8 +1547,8 @@ gen_link_task(void *arg, int pending)
 	GEN_UNLOCK(sc);
 }
 
-static void
-gen_miibus_statchg(device_t dev)
+void
+genet_miibus_statchg(device_t dev)
 {
 	struct gen_softc *sc;
 
@@ -1736,29 +1589,3 @@ gen_media_change(if_t ifp)
 
 	return (error);
 }
-
-static device_method_t gen_methods[] = {
-	/* Device interface */
-	DEVMETHOD(device_probe,		gen_probe),
-	DEVMETHOD(device_attach,	gen_attach),
-
-	/* MII interface */
-	DEVMETHOD(miibus_readreg,	gen_miibus_readreg),
-	DEVMETHOD(miibus_writereg,	gen_miibus_writereg),
-	DEVMETHOD(miibus_statchg,	gen_miibus_statchg),
-
-	DEVMETHOD_END
-};
-
-static driver_t gen_driver = {
-	"genet",
-	gen_methods,
-	sizeof(struct gen_softc),
-};
-
-static devclass_t gen_devclass;
-
-DRIVER_MODULE(genet, simplebus, gen_driver, gen_devclass, 0, 0);
-DRIVER_MODULE(miibus, genet, miibus_driver, miibus_devclass, 0, 0);
-MODULE_DEPEND(genet, ether, 1, 1, 1);
-MODULE_DEPEND(genet, miibus, 1, 1, 1);
