@@ -282,9 +282,20 @@ rk_pwm_channel_config(device_t dev, u_int channel, u_int period, u_int duty)
 	/* Datasheet doesn't define, so use Nyquist frequency. */
 	if (period_freq > (sc->clk_freq / 2))
 		return (EINVAL);
+
+	if (duty == 0) {
+		period_out = (sc->clk_freq * period) / NS_PER_SEC;
+		RK_PWM_WRITE(sc, RK_PWM_PERIOD, period_out);
+		RK_PWM_WRITE(sc, RK_PWM_DUTY, 0);
+
+		sc->period = period;
+		sc->duty = duty;
+		return (0);
+	}
 	duty_freq = NS_PER_SEC / duty;
 	if (duty_freq < period_freq) {
-		device_printf(sc->dev, "duty < period\n");
+		device_printf(sc->dev, "duty < period (%lu < %lu)\n",
+		    duty_freq, period_freq);
 		return (EINVAL);
 	}
 
