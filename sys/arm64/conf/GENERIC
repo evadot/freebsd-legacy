@@ -320,6 +320,7 @@ device		vt
 device		kbdmux
 
 device		vt_efifb
+device		backlight
 
 # EVDEV support
 device		evdev			# input event device support
