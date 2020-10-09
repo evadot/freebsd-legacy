@@ -74,6 +74,31 @@ struct kobj_attribute {
 	    const char *buf, size_t count);
 };
 
+int	lkpi_kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list);
+int	lkpi_kobject_add(struct kobject *kobj, struct kobject *parent,
+	    const char *fmt, ...);
+int	lkpi_kobject_set_name(struct kobject *kobj, const char *fmt, ...);
+int	lkpi_kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
+	    struct kobject *parent, const char *fmt, ...);
+void	lkpi_kobject_kfree_name(struct kobject *kobj);
+int	lkpi_kobject_add_complete(struct kobject *kobj, struct kobject *parent);
+void	lkpi_kobject_release(struct kref *kref);
+
+#define	kobject_set_name_vargs(kobj, fmt, va)	\
+	lkpi_kobject_set_name_vargs(kobj, fmt, va)
+#define	kobject_add(kobj, parent, fmt, ...)	\
+	lkpi_kobject_add(kobj, parent, fmt, ##__VA_ARGS__)
+#define	kobject_set_name(kobj, fmt, ...)	\
+	lkpi_kobject_set_name(kobj, fmt, ##__VA_ARGS__)
+#define	kobject_init_and_add(kobj, ktype, parent, fmt, ...)	\
+	lkpi_kobject_init_and_add(kobj, ktype, parent, fmt, ##__VA_ARGS__)
+#define	kobject_kfree_name(kobj)	\
+	lkpi_kobject_kfree_name(kobj)
+#define	kobject_add_complete(kobj, parent)	\
+	lkpi_kobject_add_complete(kobj, parent)
+#define	kobject_release(kobj)		\
+	lkpi_kobject_release(kobj)
+
 static inline void
 kobject_init(struct kobject *kobj, const struct kobj_type *ktype)
 {
@@ -84,14 +109,12 @@ kobject_init(struct kobject *kobj, const struct kobj_type *ktype)
 	kobj->oidp = NULL;
 }
 
-void linux_kobject_release(struct kref *kref);
-
 static inline void
 kobject_put(struct kobject *kobj)
 {
 
 	if (kobj)
-		kref_put(&kobj->kref, linux_kobject_release);
+		kref_put(&kobj->kref, lkpi_kobject_release);
 }
 
 static inline struct kobject *
@@ -102,10 +125,6 @@ kobject_get(struct kobject *kobj)
 		kref_get(&kobj->kref);
 	return kobj;
 }
-
-int	kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list);
-int	kobject_add(struct kobject *kobj, struct kobject *parent,
-	    const char *fmt, ...);
 
 static inline struct kobject *
 kobject_create(void)
@@ -146,9 +165,5 @@ kobject_name(const struct kobject *kobj)
 
 	return kobj->name;
 }
-
-int	kobject_set_name(struct kobject *kobj, const char *fmt, ...);
-int	kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
-	    struct kobject *parent, const char *fmt, ...);
 
 #endif /* _LINUX_KOBJECT_H_ */
