@@ -131,132 +131,6 @@ panic_cmp(struct rb_node *one, struct rb_node *two)
 
 RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
 
-int
-kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
-{
-	va_list tmp_va;
-	int len;
-	char *old;
-	char *name;
-	char dummy;
-
-	old = kobj->name;
-
-	if (old && fmt == NULL)
-		return (0);
-
-	/* compute length of string */
-	va_copy(tmp_va, args);
-	len = vsnprintf(&dummy, 0, fmt, tmp_va);
-	va_end(tmp_va);
-
-	/* account for zero termination */
-	len++;
-
-	/* check for error */
-	if (len < 1)
-		return (-EINVAL);
-
-	/* allocate memory for string */
-	name = kzalloc(len, GFP_KERNEL);
-	if (name == NULL)
-		return (-ENOMEM);
-	vsnprintf(name, len, fmt, args);
-	kobj->name = name;
-
-	/* free old string */
-	kfree(old);
-
-	/* filter new string */
-	for (; *name != '\0'; name++)
-		if (*name == '/')
-			*name = '!';
-	return (0);
-}
-
-int
-kobject_set_name(struct kobject *kobj, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-
-	return (error);
-}
-
-static int
-kobject_add_complete(struct kobject *kobj, struct kobject *parent)
-{
-	const struct kobj_type *t;
-	int error;
-
-	kobj->parent = parent;
-	error = sysfs_create_dir(kobj);
-	if (error == 0 && kobj->ktype && kobj->ktype->default_attrs) {
-		struct attribute **attr;
-		t = kobj->ktype;
-
-		for (attr = t->default_attrs; *attr != NULL; attr++) {
-			error = sysfs_create_file(kobj, *attr);
-			if (error)
-				break;
-		}
-		if (error)
-			sysfs_remove_dir(kobj);
-	}
-	return (error);
-}
-
-int
-kobject_add(struct kobject *kobj, struct kobject *parent, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-	if (error)
-		return (error);
-
-	return kobject_add_complete(kobj, parent);
-}
-
-void
-linux_kobject_release(struct kref *kref)
-{
-	struct kobject *kobj;
-	char *name;
-
-	kobj = container_of(kref, struct kobject, kref);
-	sysfs_remove_dir(kobj);
-	name = kobj->name;
-	if (kobj->ktype && kobj->ktype->release)
-		kobj->ktype->release(kobj);
-	kfree(name);
-}
-
-static void
-linux_kobject_kfree(struct kobject *kobj)
-{
-	kfree(kobj);
-}
-
-static void
-linux_kobject_kfree_name(struct kobject *kobj)
-{
-	if (kobj) {
-		kfree(kobj->name);
-	}
-}
-
-const struct kobj_type linux_kfree_type = {
-	.release = linux_kobject_kfree
-};
-
 static void
 linux_device_release(struct device *dev)
 {
@@ -384,26 +258,6 @@ device_create(struct class *class, struct device *parent, dev_t devt,
 	device_register(dev);
 
 	return (dev);
-}
-
-int
-kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
-    struct kobject *parent, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	kobject_init(kobj, ktype);
-	kobj->ktype = ktype;
-	kobj->parent = parent;
-	kobj->name = NULL;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-	if (error)
-		return (error);
-	return kobject_add_complete(kobj, parent);
 }
 
 static void
@@ -2532,9 +2386,9 @@ SYSINIT(linux_compat, SI_SUB_DRIVERS, SI_ORDER_SECOND, linux_compat_init, NULL);
 static void
 linux_compat_uninit(void *arg)
 {
-	linux_kobject_kfree_name(&linux_class_root);
-	linux_kobject_kfree_name(&linux_root_device.kobj);
-	linux_kobject_kfree_name(&linux_class_misc.kobj);
+	kobject_kfree_name(&linux_class_root);
+	kobject_kfree_name(&linux_root_device.kobj);
+	kobject_kfree_name(&linux_class_misc.kobj);
 
 	mtx_destroy(&vmmaplock);
 	spin_lock_destroy(&pci_lock);

@@ -33,6 +33,7 @@
 
 #define	MISC_DYNAMIC_MINOR	-1
 
+#include <linux/kobject.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
 
