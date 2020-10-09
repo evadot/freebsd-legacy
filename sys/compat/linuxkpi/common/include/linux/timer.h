@@ -47,7 +47,7 @@ struct timer_list {
 	int expires;
 };
 
-extern unsigned long linux_timer_hz_mask;
+extern unsigned long lkpi_timer_hz_mask;
 
 #define	TIMER_IRQSAFE	0x0001
 
@@ -78,15 +78,27 @@ extern unsigned long linux_timer_hz_mask;
 	callout_init(&(timer)->callout, 1);			\
 } while (0)
 
-extern int mod_timer(struct timer_list *, int);
-extern void add_timer(struct timer_list *);
-extern void add_timer_on(struct timer_list *, int cpu);
-extern int del_timer(struct timer_list *);
-extern int del_timer_sync(struct timer_list *);
+int lkpi_mod_timer(struct timer_list *timer, int expires);
+void lkpi_add_timer(struct timer_list *timer);
+void lkpi_add_timer_on(struct timer_list *timer, int cpu);
+int lkpi_del_timer(struct timer_list *timer);
+int lkpi_del_timer_sync(struct timer_list *timer);
+
+
+#define	mod_timer(timer, expires)	\
+	lkpi_mod_timer(timer, expires)
+#define	add_timer(timer)		\
+	lkpi_add_timer(timer)
+#define	add_timer_on(timer, cpu)	\
+	lkpi_timer_on(timer, cpu)
+#define	del_timer(timer)		\
+	lkpi_del_timer(timer)
+#define	del_timer_sync(timer)		\
+	lkpi_del_timer_sync(timer)
 
 #define	timer_pending(timer)	callout_pending(&(timer)->callout)
 #define	round_jiffies(j)	\
-	((int)(((j) + linux_timer_hz_mask) & ~linux_timer_hz_mask))
+	((int)(((j) + lkpi_timer_hz_mask) & ~lkpi_timer_hz_mask))
 #define	round_jiffies_relative(j) round_jiffies(j)
 #define	round_jiffies_up(j)	round_jiffies(j)
 #define	round_jiffies_up_relative(j) round_jiffies_up(j)
