@@ -160,7 +160,7 @@ drmkpi_mutex_lock_interruptible(mutex_t *m)
 }
 
 int
-linux_down_write_killable(struct rw_semaphore *rw)
+drmkpi_down_write_killable(struct rw_semaphore *rw)
 {
 	int error;
 

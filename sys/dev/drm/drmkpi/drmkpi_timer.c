@@ -31,23 +31,23 @@ __FBSDID("$FreeBSD$");
 #include <linux/jiffies.h>
 #include <linux/timer.h>
 
-unsigned long lkpi_timer_hz_mask;
+unsigned long drmkpi_timer_hz_mask;
 
-uint64_t lkpi_nsec2hz_rem;
-uint64_t lkpi_nsec2hz_div = 1000000000ULL;
-uint64_t lkpi_nsec2hz_max;
+uint64_t drmkpi_nsec2hz_rem;
+uint64_t drmkpi_nsec2hz_div = 1000000000ULL;
+uint64_t drmkpi_nsec2hz_max;
 
-uint64_t lkpi_usec2hz_rem;
-uint64_t lkpi_usec2hz_div = 1000000ULL;
-uint64_t lkpi_usec2hz_max;
+uint64_t drmkpi_usec2hz_rem;
+uint64_t drmkpi_usec2hz_div = 1000000ULL;
+uint64_t drmkpi_usec2hz_max;
 
-uint64_t lkpi_msec2hz_rem;
-uint64_t lkpi_msec2hz_div = 1000ULL;
-uint64_t lkpi_msec2hz_max;
+uint64_t drmkpi_msec2hz_rem;
+uint64_t drmkpi_msec2hz_div = 1000ULL;
+uint64_t drmkpi_msec2hz_max;
 
 /* greatest common divisor, Euclid equation */
 static uint64_t
-lkpi_gcd_64(uint64_t a, uint64_t b)
+drmkpi_gcd_64(uint64_t a, uint64_t b)
 {
 	uint64_t an;
 	uint64_t bn;
@@ -62,7 +62,7 @@ lkpi_gcd_64(uint64_t a, uint64_t b)
 }
 
 static void
-lkpi_timer_callback_wrapper(void *context)
+drmkpi_timer_callback_wrapper(void *context)
 {
 	struct timer_list *timer;
 
@@ -73,14 +73,14 @@ lkpi_timer_callback_wrapper(void *context)
 }
 
 int
-lkpi_mod_timer(struct timer_list *timer, int expires)
+drmkpi_mod_timer(struct timer_list *timer, int expires)
 {
 	int ret;
 
 	timer->expires = expires;
 	ret = callout_reset(&timer->callout,
 	    linux_timer_jiffies_until(expires),
-	    &lkpi_timer_callback_wrapper, timer);
+	    &drmkpi_timer_callback_wrapper, timer);
 
 	MPASS(ret == 0 || ret == 1);
 
@@ -88,25 +88,25 @@ lkpi_mod_timer(struct timer_list *timer, int expires)
 }
 
 void
-lkpi_add_timer(struct timer_list *timer)
+drmkpi_add_timer(struct timer_list *timer)
 {
 
 	callout_reset(&timer->callout,
 	    linux_timer_jiffies_until(timer->expires),
-	    &lkpi_timer_callback_wrapper, timer);
+	    &drmkpi_timer_callback_wrapper, timer);
 }
 
 void
-lkpi_add_timer_on(struct timer_list *timer, int cpu)
+drmkpi_add_timer_on(struct timer_list *timer, int cpu)
 {
 
 	callout_reset_on(&timer->callout,
 	    linux_timer_jiffies_until(timer->expires),
-	    &lkpi_timer_callback_wrapper, timer, cpu);
+	    &drmkpi_timer_callback_wrapper, timer, cpu);
 }
 
 int
-lkpi_del_timer(struct timer_list *timer)
+drmkpi_del_timer(struct timer_list *timer)
 {
 
 	if (callout_stop(&(timer)->callout) == -1)
@@ -115,7 +115,7 @@ lkpi_del_timer(struct timer_list *timer)
 }
 
 int
-lkpi_del_timer_sync(struct timer_list *timer)
+drmkpi_del_timer_sync(struct timer_list *timer)
 {
 
 	if (callout_drain(&(timer)->callout) == -1)
@@ -124,7 +124,7 @@ lkpi_del_timer_sync(struct timer_list *timer)
 }
 
 static void
-lkpi_timer_init(void *arg)
+drmkpi_timer_init(void *arg)
 {
 	uint64_t gcd;
 
@@ -133,30 +133,30 @@ lkpi_timer_init(void *arg)
 	 * avoid timer rounding problems when the tick value wraps
 	 * around 2**32:
 	 */
-	lkpi_timer_hz_mask = 1;
-	while (lkpi_timer_hz_mask < (unsigned long)hz)
-		lkpi_timer_hz_mask *= 2;
-	lkpi_timer_hz_mask--;
+	drmkpi_timer_hz_mask = 1;
+	while (drmkpi_timer_hz_mask < (unsigned long)hz)
+		drmkpi_timer_hz_mask *= 2;
+	drmkpi_timer_hz_mask--;
 
 	/* compute some internal constants */
 
-	lkpi_nsec2hz_rem = hz;
-	lkpi_usec2hz_rem = hz;
-	lkpi_msec2hz_rem = hz;
+	drmkpi_nsec2hz_rem = hz;
+	drmkpi_usec2hz_rem = hz;
+	drmkpi_msec2hz_rem = hz;
 
-	gcd = lkpi_gcd_64(lkpi_nsec2hz_rem, lkpi_nsec2hz_div);
-	lkpi_nsec2hz_rem /= gcd;
-	lkpi_nsec2hz_div /= gcd;
-	lkpi_nsec2hz_max = -1ULL / lkpi_nsec2hz_rem;
+	gcd = drmkpi_gcd_64(drmkpi_nsec2hz_rem, drmkpi_nsec2hz_div);
+	drmkpi_nsec2hz_rem /= gcd;
+	drmkpi_nsec2hz_div /= gcd;
+	drmkpi_nsec2hz_max = -1ULL / drmkpi_nsec2hz_rem;
 
-	gcd = lkpi_gcd_64(lkpi_usec2hz_rem, lkpi_usec2hz_div);
-	lkpi_usec2hz_rem /= gcd;
-	lkpi_usec2hz_div /= gcd;
-	lkpi_usec2hz_max = -1ULL / lkpi_usec2hz_rem;
+	gcd = drmkpi_gcd_64(drmkpi_usec2hz_rem, drmkpi_usec2hz_div);
+	drmkpi_usec2hz_rem /= gcd;
+	drmkpi_usec2hz_div /= gcd;
+	drmkpi_usec2hz_max = -1ULL / drmkpi_usec2hz_rem;
 
-	gcd = lkpi_gcd_64(lkpi_msec2hz_rem, lkpi_msec2hz_div);
-	lkpi_msec2hz_rem /= gcd;
-	lkpi_msec2hz_div /= gcd;
-	lkpi_msec2hz_max = -1ULL / lkpi_msec2hz_rem;
+	gcd = drmkpi_gcd_64(drmkpi_msec2hz_rem, drmkpi_msec2hz_div);
+	drmkpi_msec2hz_rem /= gcd;
+	drmkpi_msec2hz_div /= gcd;
+	drmkpi_msec2hz_max = -1ULL / drmkpi_msec2hz_rem;
 }
-SYSINIT(lkpi_timer, SI_SUB_DRIVERS, SI_ORDER_FIRST, lkpi_timer_init, NULL);
+SYSINIT(drmkpi_timer, SI_SUB_DRIVERS, SI_ORDER_FIRST, drmkpi_timer_init, NULL);

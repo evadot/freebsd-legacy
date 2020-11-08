@@ -41,9 +41,6 @@
 
 #include <sys/libkern.h>
 
-#define	strnicmp(...) strncasecmp(__VA_ARGS__)
-#define strscpy(...) strlcpy(__VA_ARGS__)
-
 static inline int
 match_string(const char *const *table, int n, const char *key)
 {
@@ -54,37 +51,6 @@ match_string(const char *const *table, int n, const char *key)
 			return (i);
 	}
 	return (-EINVAL);
-}
-
-static inline void *
-memdup_user(const void *ptr, size_t len)
-{
-	void *retval;
-	int error;
-
-	retval = malloc(len, M_KMALLOC, M_WAITOK);
-	error = linux_copyin(ptr, retval, len);
-	if (error != 0) {
-		free(retval, M_KMALLOC);
-		return (ERR_PTR(error));
-	}
-	return (retval);
-}
-
-static inline void *
-memdup_user_nul(const void *ptr, size_t len)
-{
-	char *retval;
-	int error;
-
-	retval = malloc(len + 1, M_KMALLOC, M_WAITOK);
-	error = linux_copyin(ptr, retval, len);
-	if (error != 0) {
-		free(retval, M_KMALLOC);
-		return (ERR_PTR(error));
-	}
-	retval[len] = '\0';
-	return (retval);
 }
 
 static inline void *
@@ -111,33 +77,6 @@ kstrdup(const char *string, gfp_t gfp)
 	if (retval != NULL)
 		memcpy(retval, string, len);
 	return (retval);
-}
-
-static inline char *
-kstrndup(const char *string, size_t len, gfp_t gfp)
-{
-	char *retval;
-
-	if (string == NULL)
-		return (NULL);
-	retval = kmalloc(len + 1, gfp);
-	if (retval != NULL)
-		strncpy(retval, string, len);
-	return (retval);
-}
-
-static inline const char *
-kstrdup_const(const char *src, gfp_t gfp)
-{
-	return (kmemdup(src, strlen(src) + 1, gfp));
-}
-
-static inline char *
-skip_spaces(const char *str)
-{
-	while (isspace(*str))
-		++str;
-	return (__DECONST(char *, str));
 }
 
 static inline void *

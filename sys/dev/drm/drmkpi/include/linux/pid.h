@@ -56,7 +56,7 @@ enum pid_type {
 #define	get_pid_task(pid, type) ({		\
 	struct task_struct *__ts;		\
 	CTASSERT((type) == PIDTYPE_PID);	\
-	__ts = linux_get_pid_task(pid);		\
+	__ts = drmkpi_get_pid_task(pid);	\
 	__ts;					\
 })
 
@@ -66,7 +66,7 @@ enum pid_type {
 })
 
 struct task_struct;
-extern struct task_struct *linux_pid_task(pid_t);
-extern struct task_struct *linux_get_pid_task(pid_t);
+extern struct task_struct *drmkpi_pid_task(pid_t);
+extern struct task_struct *drmkpi_get_pid_task(pid_t);
 
 #endif					/* _LINUX_PID_H_ */

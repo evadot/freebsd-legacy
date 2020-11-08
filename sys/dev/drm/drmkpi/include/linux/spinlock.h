@@ -60,7 +60,7 @@ typedef struct {
 	if (SPIN_SKIP())			\
 		break;				\
 	mtx_lock(&(_l)->m);			\
-	local_bh_disable();			\
+	drmkpi_local_bh_disable();		\
 } while (0)
 
 #define	spin_lock_bh(_l) do {			\
@@ -74,7 +74,7 @@ typedef struct {
 #define	spin_unlock(_l)	do {			\
 	if (SPIN_SKIP())			\
 		break;				\
-	local_bh_enable();			\
+	drmkpi_local_bh_enable();		\
 	mtx_unlock(&(_l)->m);			\
 } while (0)
 
@@ -93,7 +93,7 @@ typedef struct {
 	} else {				\
 		__ret = mtx_trylock(&(_l)->m);	\
 		if (likely(__ret != 0))		\
-			local_bh_disable();	\
+			drmkpi_local_bh_disable();	\
 	}					\
 	__ret;					\
 })
@@ -105,7 +105,7 @@ typedef struct {
 	if (SPIN_SKIP())			\
 		break;				\
 	mtx_lock_flags(&(_l)->m, MTX_DUPOK);	\
-	local_bh_disable();			\
+	drmkpi_local_bh_disable();		\
 } while (0)
 
 #define	spin_lock_irqsave(_l, flags) do {	\

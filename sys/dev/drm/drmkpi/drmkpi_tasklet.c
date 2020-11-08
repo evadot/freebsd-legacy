@@ -141,113 +141,13 @@ tasklet_subsystem_uninit(void *arg __unused)
 SYSUNINIT(linux_tasklet, SI_SUB_TASKQ, SI_ORDER_THIRD, tasklet_subsystem_uninit, NULL);
 
 void
-tasklet_init(struct tasklet_struct *ts,
-    tasklet_func_t *func, unsigned long data)
-{
-	ts->entry.tqe_prev = NULL;
-	ts->entry.tqe_next = NULL;
-	ts->func = func;
-	ts->data = data;
-	atomic_set_int(&ts->tasklet_state, TASKLET_ST_IDLE);
-	atomic_set(&ts->count, 0);
-}
-
-void
-local_bh_enable(void)
+drmkpi_local_bh_enable(void)
 {
 	sched_unpin();
 }
 
 void
-local_bh_disable(void)
+drmkpi_local_bh_disable(void)
 {
 	sched_pin();
-}
-
-void
-tasklet_schedule(struct tasklet_struct *ts)
-{
-
-	/* tasklet is paused */
-	if (atomic_read(&ts->count))
-		return;
-
-	if (TASKLET_ST_CMPSET(ts, TASKLET_ST_EXEC, TASKLET_ST_LOOP)) {
-		/* tasklet_handler() will loop */
-	} else if (TASKLET_ST_CMPSET(ts, TASKLET_ST_IDLE, TASKLET_ST_BUSY)) {
-		struct tasklet_worker *tw;
-
-		tw = &DPCPU_GET(tasklet_worker);
-
-		/* tasklet_handler() was not queued */
-		TASKLET_WORKER_LOCK(tw);
-		/* enqueue tasklet */
-		TAILQ_INSERT_TAIL(&tw->head, ts, entry);
-		/* schedule worker */
-		GROUPTASK_ENQUEUE(&tw->gtask);
-		TASKLET_WORKER_UNLOCK(tw);
-	} else {
-		/*
-		 * tasklet_handler() is already executing
-		 *
-		 * If the state is neither EXEC nor IDLE, it is either
-		 * LOOP or BUSY. If the state changed between the two
-		 * CMPSET's above the only possible transitions by
-		 * elimination are LOOP->EXEC and BUSY->EXEC. If a
-		 * EXEC->LOOP transition was missed that is not a
-		 * problem because the callback function is then
-		 * already about to be called again.
-		 */
-	}
-}
-
-void
-tasklet_kill(struct tasklet_struct *ts)
-{
-
-	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL, "tasklet_kill() can sleep");
-
-	/* wait until tasklet is no longer busy */
-	while (TASKLET_ST_GET(ts) != TASKLET_ST_IDLE)
-		pause("W", 1);
-}
-
-void
-tasklet_enable(struct tasklet_struct *ts)
-{
-
-	atomic_dec(&ts->count);
-}
-
-void
-tasklet_disable(struct tasklet_struct *ts)
-{
-
-	atomic_inc(&ts->count);
-	tasklet_unlock_wait(ts);
-}
-
-int
-tasklet_trylock(struct tasklet_struct *ts)
-{
-
-	return (TASKLET_ST_CMPSET(ts, TASKLET_ST_IDLE, TASKLET_ST_BUSY));
-}
-
-void
-tasklet_unlock(struct tasklet_struct *ts)
-{
-
-	TASKLET_ST_SET(ts, TASKLET_ST_IDLE);
-}
-
-void
-tasklet_unlock_wait(struct tasklet_struct *ts)
-{
-
-	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL, "tasklet_kill() can sleep");
-
-	/* wait until tasklet is no longer busy */
-	while (TASKLET_ST_GET(ts) != TASKLET_ST_IDLE)
-		pause("W", 1);
 }

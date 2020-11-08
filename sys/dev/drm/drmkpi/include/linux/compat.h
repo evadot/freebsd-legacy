@@ -38,21 +38,21 @@
 struct thread;
 struct task_struct;
 
-extern int linux_alloc_current(struct thread *, int flags);
-extern void linux_free_current(struct task_struct *);
+extern int drmkpi_alloc_current(struct thread *, int flags);
+extern void drmkpi_free_current(struct task_struct *);
 
 static inline void
 linux_set_current(struct thread *td)
 {
 	if (__predict_false(td->td_lkpi_task == NULL))
-		linux_alloc_current(td, M_WAITOK);
+		drmkpi_alloc_current(td, M_WAITOK);
 }
 
 static inline int
 linux_set_current_flags(struct thread *td, int flags)
 {
 	if (__predict_false(td->td_lkpi_task == NULL))
-		return (linux_alloc_current(td, flags));
+		return (drmkpi_alloc_current(td, flags));
 	return (0);
 }
 

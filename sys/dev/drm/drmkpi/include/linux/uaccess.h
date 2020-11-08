@@ -48,24 +48,24 @@
 #define	__get_user(_x, _p) ({					\
 	int __err;						\
 	__typeof(*(_p)) __x;					\
-	__err = linux_copyin((_p), &(__x), sizeof(*(_p)));	\
+	__err = drmkpi_copyin((_p), &(__x), sizeof(*(_p)));	\
 	(_x) = __x;						\
 	__err;							\
 })
 
 #define	__put_user(_x, _p) ({				\
 	__typeof(*(_p)) __x = (_x);			\
-	linux_copyout(&(__x), (_p), sizeof(*(_p)));	\
+	drmkpi_copyout(&(__x), (_p), sizeof(*(_p)));	\
 })
-#define	get_user(_x, _p)	linux_copyin((_p), &(_x), sizeof(*(_p)))
+#define	get_user(_x, _p)	drmkpi_copyin((_p), &(_x), sizeof(*(_p)))
 #define	put_user(_x, _p)	__put_user(_x, _p)
-#define	clear_user(...)		linux_clear_user(__VA_ARGS__)
-#define	access_ok(...)		linux_access_ok(__VA_ARGS__)
+#define	clear_user(...)		drmkpi_clear_user(__VA_ARGS__)
+#define	access_ok(...)		drmkpi_access_ok(__VA_ARGS__)
 
-extern int linux_copyin(const void *uaddr, void *kaddr, size_t len);
-extern int linux_copyout(const void *kaddr, void *uaddr, size_t len);
-extern size_t linux_clear_user(void *uaddr, size_t len);
-extern int linux_access_ok(const void *uaddr, size_t len);
+extern int drmkpi_copyin(const void *uaddr, void *kaddr, size_t len);
+extern int drmkpi_copyout(const void *kaddr, void *uaddr, size_t len);
+extern size_t drmkpi_clear_user(void *uaddr, size_t len);
+extern int drmkpi_access_ok(const void *uaddr, size_t len);
 
 /*
  * NOTE: Each pagefault_disable() call must have a corresponding

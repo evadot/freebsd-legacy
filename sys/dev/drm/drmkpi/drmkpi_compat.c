@@ -57,7 +57,7 @@ __FBSDID("$FreeBSD$");
 
 SYSCTL_NODE(_compat, OID_AUTO, drmkpi, CTLFLAG_RW, 0, "DRMKPI parameters");
 
-MALLOC_DEFINE(M_KMALLOC, "drmkpi", "DRM kmalloc compat");
+MALLOC_DEFINE(M_DRMKMALLOC, "drmkpi", "DRM kmalloc compat");
 
 #include <linux/rbtree.h>
 /* Undo Linux compat changes. */
@@ -65,23 +65,23 @@ MALLOC_DEFINE(M_KMALLOC, "drmkpi", "DRM kmalloc compat");
 #define	RB_ROOT(head)	(head)->rbh_root
 
 int
-panic_cmp(struct rb_node *one, struct rb_node *two)
+drmkpi_panic_cmp(struct rb_node *one, struct rb_node *two)
 {
 	panic("no cmp");
 }
 
-RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
+RB_GENERATE(drmkpi_root, rb_node, __entry, drmkpi_panic_cmp);
 
-#define	LINUX_IOCTL_MIN_PTR 0x10000UL
-#define	LINUX_IOCTL_MAX_PTR (LINUX_IOCTL_MIN_PTR + IOCPARM_MAX)
+#define	DRMKPI_IOCTL_MIN_PTR 0x10000UL
+#define	DRMKPI_IOCTL_MAX_PTR (DRMKPI_IOCTL_MIN_PTR + IOCPARM_MAX)
 
 static inline int
-linux_remap_address(void **uaddr, size_t len)
+drmkpi_remap_address(void **uaddr, size_t len)
 {
 	uintptr_t uaddr_val = (uintptr_t)(*uaddr);
 
-	if (unlikely(uaddr_val >= LINUX_IOCTL_MIN_PTR &&
-	    uaddr_val < LINUX_IOCTL_MAX_PTR)) {
+	if (unlikely(uaddr_val >= DRMKPI_IOCTL_MIN_PTR &&
+	    uaddr_val < DRMKPI_IOCTL_MAX_PTR)) {
 		struct task_struct *pts = current;
 		if (pts == NULL) {
 			*uaddr = NULL;
@@ -89,11 +89,11 @@ linux_remap_address(void **uaddr, size_t len)
 		}
 
 		/* compute data offset */
-		uaddr_val -= LINUX_IOCTL_MIN_PTR;
+		uaddr_val -= DRMKPI_IOCTL_MIN_PTR;
 
 		/* check that length is within bounds */
 		if ((len > IOCPARM_MAX) ||
-		    (uaddr_val + len) > pts->bsd_ioctl_len) {
+		  (uaddr_val + len) > pts->bsd_ioctl_len) {
 			*uaddr = NULL;
 			return (1);
 		}
@@ -108,10 +108,11 @@ linux_remap_address(void **uaddr, size_t len)
 	return (0);
 }
 
+
 int
-linux_copyin(const void *uaddr, void *kaddr, size_t len)
+drmkpi_copyin(const void *uaddr, void *kaddr, size_t len)
 {
-	if (linux_remap_address(__DECONST(void **, &uaddr), len)) {
+	if (drmkpi_remap_address(__DECONST(void **, &uaddr), len)) {
 		if (uaddr == NULL)
 			return (-EFAULT);
 		memcpy(kaddr, uaddr, len);
@@ -121,9 +122,9 @@ linux_copyin(const void *uaddr, void *kaddr, size_t len)
 }
 
 int
-linux_copyout(const void *kaddr, void *uaddr, size_t len)
+drmkpi_copyout(const void *kaddr, void *uaddr, size_t len)
 {
-	if (linux_remap_address(&uaddr, len)) {
+	if (drmkpi_remap_address(&uaddr, len)) {
 		if (uaddr == NULL)
 			return (-EFAULT);
 		memcpy(uaddr, kaddr, len);
@@ -133,7 +134,7 @@ linux_copyout(const void *kaddr, void *uaddr, size_t len)
 }
 
 size_t
-linux_clear_user(void *_uaddr, size_t _len)
+drmkpi_clear_user(void *_uaddr, size_t _len)
 {
 	uint8_t *uaddr = _uaddr;
 	size_t len = _len;
@@ -172,7 +173,7 @@ linux_clear_user(void *_uaddr, size_t _len)
 }
 
 int
-linux_access_ok(const void *uaddr, size_t len)
+drmkpi_access_ok(const void *uaddr, size_t len)
 {
 	uintptr_t saddr;
 	uintptr_t eaddr;
@@ -199,7 +200,7 @@ iminor(struct inode *inode)
 }
 
 void
-linux_complete_common(struct completion *c, int all)
+drmkpi_complete_common(struct completion *c, int all)
 {
 	int wakeup_swapper;
 
@@ -221,7 +222,7 @@ linux_complete_common(struct completion *c, int all)
  * Indefinite wait for done != 0 with or without signals.
  */
 int
-linux_wait_for_common(struct completion *c, int flags)
+drmkpi_wait_for_common(struct completion *c, int flags)
 {
 	struct task_struct *task;
 	int error;
@@ -268,7 +269,7 @@ intr:
  * Time limited wait for done != 0 with or without signals.
  */
 int
-linux_wait_for_timeout_common(struct completion *c, int timeout, int flags)
+drmkpi_wait_for_timeout_common(struct completion *c, int timeout, int flags)
 {
 	struct task_struct *task;
 	int end = jiffies + timeout;
@@ -321,7 +322,7 @@ done:
 }
 
 int
-linux_try_wait_for_completion(struct completion *c)
+drmkpi_try_wait_for_completion(struct completion *c)
 {
 	int isdone;
 
@@ -334,7 +335,7 @@ linux_try_wait_for_completion(struct completion *c)
 }
 
 int
-linux_completion_done(struct completion *c)
+drmkpi_completion_done(struct completion *c)
 {
 	int isdone;
 
@@ -362,7 +363,7 @@ linux_le_cmp(void *priv, const void *d1, const void *d2)
 }
 
 void
-list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
+drmkpi_list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
     struct list_head *a, struct list_head *b))
 {
 	struct list_sort_thunk thunk;
@@ -372,7 +373,7 @@ list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
 	count = 0;
 	list_for_each(le, head)
 		count++;
-	ar = malloc(sizeof(struct list_head *) * count, M_KMALLOC, M_WAITOK);
+	ar = malloc(sizeof(struct list_head *) * count, M_DRMKMALLOC, M_WAITOK);
 	i = 0;
 	list_for_each(le, head)
 		ar[i++] = le;
@@ -382,31 +383,11 @@ list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
 	INIT_LIST_HEAD(head);
 	for (i = 0; i < count; i++)
 		list_add_tail(ar[i], head);
-	free(ar, M_KMALLOC);
-}
-
-
-#if defined(__i386__) || defined(__amd64__)
-int
-linux_wbinvd_on_all_cpus(void)
-{
-
-	pmap_invalidate_cache();
-	return (0);
-}
-#endif
-
-int
-linux_on_each_cpu(void callback(void *), void *data)
-{
-
-	smp_rendezvous(smp_no_rendezvous_barrier, callback,
-	    smp_no_rendezvous_barrier, data);
-	return (0);
+	free(ar, M_DRMKMALLOC);
 }
 
 int
-linux_in_atomic(void)
+drmkpi_in_atomic(void)
 {
 
 	return ((curthread->td_pflags & TDP_NOFAULTING) != 0);

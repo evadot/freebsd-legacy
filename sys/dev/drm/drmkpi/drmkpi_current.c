@@ -36,12 +36,12 @@ __FBSDID("$FreeBSD$");
 #include <sys/eventhandler.h>
 #include <sys/malloc.h>
 
-static eventhandler_tag linuxkpi_thread_dtor_tag;
+static eventhandler_tag drmkpi_thread_dtor_tag;
 
 static MALLOC_DEFINE(M_LINUX_CURRENT, "linuxcurrent", "LinuxKPI task structure");
 
 int
-linux_alloc_current(struct thread *td, int flags)
+drmkpi_alloc_current(struct thread *td, int flags)
 {
 	struct proc *proc;
 	struct thread *td_other;
@@ -117,7 +117,7 @@ linux_alloc_current(struct thread *td, int flags)
 }
 
 struct mm_struct *
-linux_get_task_mm(struct task_struct *task)
+drmkpi_get_task_mm(struct task_struct *task)
 {
 	struct mm_struct *mm;
 
@@ -130,20 +130,20 @@ linux_get_task_mm(struct task_struct *task)
 }
 
 void
-linux_mm_dtor(struct mm_struct *mm)
+drmkpi_mm_dtor(struct mm_struct *mm)
 {
 	free(mm, M_LINUX_CURRENT);
 }
 
 void
-linux_free_current(struct task_struct *ts)
+drmkpi_free_current(struct task_struct *ts)
 {
 	mmput(ts->mm);
 	free(ts, M_LINUX_CURRENT);
 }
 
 static void
-linuxkpi_thread_dtor(void *arg __unused, struct thread *td)
+drmkpi_thread_dtor(void *arg __unused, struct thread *td)
 {
 	struct task_struct *ts;
 
@@ -156,7 +156,7 @@ linuxkpi_thread_dtor(void *arg __unused, struct thread *td)
 }
 
 static struct task_struct *
-linux_get_pid_task_int(pid_t pid, const bool do_get)
+drmkpi_get_pid_task_int(pid_t pid, const bool do_get)
 {
 	struct thread *td;
 	struct proc *p;
@@ -192,19 +192,19 @@ linux_get_pid_task_int(pid_t pid, const bool do_get)
 }
 
 struct task_struct *
-linux_pid_task(pid_t pid)
+drmkpi_pid_task(pid_t pid)
 {
-	return (linux_get_pid_task_int(pid, false));
+	return (drmkpi_get_pid_task_int(pid, false));
 }
 
 struct task_struct *
-linux_get_pid_task(pid_t pid)
+drmkpi_get_pid_task(pid_t pid)
 {
-	return (linux_get_pid_task_int(pid, true));
+	return (drmkpi_get_pid_task_int(pid, true));
 }
 
 bool
-linux_task_exiting(struct task_struct *task)
+drmkpi_task_exiting(struct task_struct *task)
 {
 	struct thread *td;
 	struct proc *p;
@@ -230,16 +230,16 @@ linux_task_exiting(struct task_struct *task)
 }
 
 static void
-linux_current_init(void *arg __unused)
+drmkpi_current_init(void *arg __unused)
 {
-	lkpi_alloc_current = linux_alloc_current;
-	linuxkpi_thread_dtor_tag = EVENTHANDLER_REGISTER(thread_dtor,
-	    linuxkpi_thread_dtor, NULL, EVENTHANDLER_PRI_ANY);
+	lkpi_alloc_current = drmkpi_alloc_current;
+	drmkpi_thread_dtor_tag = EVENTHANDLER_REGISTER(thread_dtor,
+	    drmkpi_thread_dtor, NULL, EVENTHANDLER_PRI_ANY);
 }
-SYSINIT(linux_current, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, linux_current_init, NULL);
+SYSINIT(drmkpi_current, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, drmkpi_current_init, NULL);
 
 static void
-linux_current_uninit(void *arg __unused)
+drmkpi_current_uninit(void *arg __unused)
 {
 	struct proc *p;
 	struct task_struct *ts;
@@ -257,7 +257,7 @@ linux_current_uninit(void *arg __unused)
 		PROC_UNLOCK(p);
 	}
 	sx_sunlock(&allproc_lock);
-	EVENTHANDLER_DEREGISTER(thread_dtor, linuxkpi_thread_dtor_tag);
+	EVENTHANDLER_DEREGISTER(thread_dtor, drmkpi_thread_dtor_tag);
 	lkpi_alloc_current = linux_alloc_current_noop;
 }
-SYSUNINIT(linux_current, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, linux_current_uninit, NULL);
+SYSUNINIT(drmkpi_current, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, drmkpi_current_uninit, NULL);

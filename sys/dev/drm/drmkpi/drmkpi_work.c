@@ -49,14 +49,14 @@ enum {
 /*
  * Define global workqueues
  */
-static struct workqueue_struct *drmkpi_system_short_wq;
-static struct workqueue_struct *drmkpi_system_long_wq;
+static struct workqueue_struct *drmkpi__system_short_wq;
+static struct workqueue_struct *drmkpi__system_long_wq;
 
-struct workqueue_struct *system_wq;
-struct workqueue_struct *system_long_wq;
-struct workqueue_struct *system_unbound_wq;
-struct workqueue_struct *system_highpri_wq;
-struct workqueue_struct *system_power_efficient_wq;
+struct workqueue_struct *drmkpi_system_wq;
+struct workqueue_struct *drmkpi_system_long_wq;
+struct workqueue_struct *drmkpi_system_unbound_wq;
+struct workqueue_struct *drmkpi_system_highpri_wq;
+struct workqueue_struct *drmkpi_system_power_efficient_wq;
 
 static int drmkpi_default_wq_cpus = 4;
 
@@ -604,23 +604,23 @@ drmkpi_work_init(void *arg)
 	/* set default number of CPUs */
 	drmkpi_default_wq_cpus = max_wq_cpus;
 
-	drmkpi_system_short_wq = alloc_workqueue("linuxkpi_short_wq", 0, max_wq_cpus);
-	drmkpi_system_long_wq = alloc_workqueue("linuxkpi_long_wq", 0, max_wq_cpus);
+	drmkpi__system_short_wq = alloc_workqueue("linuxkpi_short_wq", 0, max_wq_cpus);
+	drmkpi__system_long_wq = alloc_workqueue("linuxkpi_long_wq", 0, max_wq_cpus);
 
 	/* populate the workqueue pointers */
-	system_long_wq = drmkpi_system_long_wq;
-	system_wq = drmkpi_system_short_wq;
-	system_power_efficient_wq = drmkpi_system_short_wq;
-	system_unbound_wq = drmkpi_system_short_wq;
-	system_highpri_wq = drmkpi_system_short_wq;
+	system_long_wq = drmkpi__system_long_wq;
+	system_wq = drmkpi__system_short_wq;
+	system_power_efficient_wq = drmkpi__system_short_wq;
+	system_unbound_wq = drmkpi__system_short_wq;
+	system_highpri_wq = drmkpi__system_short_wq;
 }
 SYSINIT(drmkpi_work_init, SI_SUB_TASKQ, SI_ORDER_THIRD, drmkpi_work_init, NULL);
 
 static void
 drmkpi_work_uninit(void *arg)
 {
-	destroy_workqueue(drmkpi_system_short_wq);
-	destroy_workqueue(drmkpi_system_long_wq);
+	destroy_workqueue(drmkpi__system_short_wq);
+	destroy_workqueue(drmkpi__system_long_wq);
 
 	/* clear workqueue pointers */
 	system_long_wq = NULL;

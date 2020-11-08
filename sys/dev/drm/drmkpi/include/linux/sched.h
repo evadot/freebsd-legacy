@@ -113,7 +113,7 @@ static inline void
 put_task_struct(struct task_struct *task)
 {
 	if (atomic_dec_and_test(&task->usage))
-		linux_free_current(task);
+		drmkpi_free_current(task);
 }
 
 #define	cond_resched()	do { if (!cold) sched_relinquish(curthread); } while (0)

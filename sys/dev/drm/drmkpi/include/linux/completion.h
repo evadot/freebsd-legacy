@@ -44,26 +44,26 @@ struct completion {
 #define	reinit_completion(c) \
 	do { (c)->done = 0; } while (0)
 #define	complete(c)				\
-	linux_complete_common((c), 0)
+	drmkpi_complete_common((c), 0)
 #define	complete_all(c)				\
-	linux_complete_common((c), 1)
+	drmkpi_complete_common((c), 1)
 #define	wait_for_completion(c)			\
-	linux_wait_for_common((c), 0)
+	drmkpi_wait_for_common((c), 0)
 #define	wait_for_completion_interruptible(c)	\
-	linux_wait_for_common((c), 1)
+	drmkpi_wait_for_common((c), 1)
 #define	wait_for_completion_timeout(c, timeout)	\
-	linux_wait_for_timeout_common((c), (timeout), 0)
+	drmkpi_wait_for_timeout_common((c), (timeout), 0)
 #define	wait_for_completion_interruptible_timeout(c, timeout)	\
-	linux_wait_for_timeout_common((c), (timeout), 1)
+	drmkpi_wait_for_timeout_common((c), (timeout), 1)
 #define	try_wait_for_completion(c) \
-	linux_try_wait_for_completion(c)
+	drmkpi_try_wait_for_completion(c)
 #define	completion_done(c) \
-	linux_completion_done(c)
+	drmkpi_completion_done(c)
 
-extern void linux_complete_common(struct completion *, int);
-extern int linux_wait_for_common(struct completion *, int);
-extern int linux_wait_for_timeout_common(struct completion *, int, int);
-extern int linux_try_wait_for_completion(struct completion *);
-extern int linux_completion_done(struct completion *);
+extern void drmkpi_complete_common(struct completion *, int);
+extern int drmkpi_wait_for_common(struct completion *, int);
+extern int drmkpi_wait_for_timeout_common(struct completion *, int, int);
+extern int drmkpi_try_wait_for_completion(struct completion *);
+extern int drmkpi_completion_done(struct completion *);
 
 #endif					/* _LINUX_COMPLETION_H_ */

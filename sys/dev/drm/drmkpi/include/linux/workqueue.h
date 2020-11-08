@@ -102,6 +102,12 @@ to_delayed_work(struct work_struct *work)
 	return (container_of(work, struct delayed_work, work));
 }
 
+#define	system_wq			drmkpi_system_wq
+#define	system_long_wq			drmkpi_system_long_wq
+#define	system_unbound_wq		drmkpi_system_unbound_wq
+#define	system_highpri_wq		drmkpi_system_highpri_wq
+#define	system_power_efficient_wq	drmkpi_system_power_efficient_wq
+
 #define	INIT_WORK(work, fn)						\
 do {									\
 	(work)->func = (fn);						\
@@ -213,11 +219,11 @@ do {									\
 
 /* prototypes */
 
-extern struct workqueue_struct *system_wq;
-extern struct workqueue_struct *system_long_wq;
-extern struct workqueue_struct *system_unbound_wq;
-extern struct workqueue_struct *system_highpri_wq;
-extern struct workqueue_struct *system_power_efficient_wq;
+extern struct workqueue_struct *drmkpi_system_wq;
+extern struct workqueue_struct *drmkpi_system_long_wq;
+extern struct workqueue_struct *drmkpi_system_unbound_wq;
+extern struct workqueue_struct *drmkpi_system_highpri_wq;
+extern struct workqueue_struct *drmkpi_system_power_efficient_wq;
 
 extern void drmkpi_init_delayed_work(struct delayed_work *, work_func_t);
 extern void drmkpi_work_fn(void *, int);

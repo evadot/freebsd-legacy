@@ -53,13 +53,13 @@ __FBSDID("$FreeBSD$");
 #define	MAX_IDR_LEVEL	((MAX_IDR_SHIFT + IDR_BITS - 1) / IDR_BITS)
 #define	MAX_IDR_FREE	(MAX_IDR_LEVEL * 2)
 
-struct linux_idr_cache {
+struct drmkpi_idr_cache {
 	spinlock_t lock;
 	struct idr_layer *head;
 	unsigned count;
 };
 
-DPCPU_DEFINE_STATIC(struct linux_idr_cache, linux_idr_cache);
+DPCPU_DEFINE_STATIC(struct drmkpi_idr_cache, drmkpi_idr_cache);
 
 /*
  * IDR Implementation.
@@ -71,7 +71,7 @@ DPCPU_DEFINE_STATIC(struct linux_idr_cache, linux_idr_cache);
 static MALLOC_DEFINE(M_IDR, "idr", "Linux IDR compat");
 
 static struct idr_layer *
-idr_preload_dequeue_locked(struct linux_idr_cache *lic)
+idr_preload_dequeue_locked(struct drmkpi_idr_cache *lic)
 {
 	struct idr_layer *retval;
 
@@ -94,8 +94,8 @@ idr_preload_init(void *arg)
 	int cpu;
 
 	CPU_FOREACH(cpu) {
-		struct linux_idr_cache *lic =
-		    DPCPU_ID_PTR(cpu, linux_idr_cache);
+		struct drmkpi_idr_cache *lic =
+		    DPCPU_ID_PTR(cpu, drmkpi_idr_cache);
 
 		spin_lock_init(&lic->lock);
 	}
@@ -109,8 +109,8 @@ idr_preload_uninit(void *arg)
 
 	CPU_FOREACH(cpu) {
 		struct idr_layer *cacheval;
-		struct linux_idr_cache *lic =
-		    DPCPU_ID_PTR(cpu, linux_idr_cache);
+		struct drmkpi_idr_cache *lic =
+		    DPCPU_ID_PTR(cpu, drmkpi_idr_cache);
 
 		while (1) {
 			spin_lock(&lic->lock);
@@ -129,12 +129,12 @@ SYSUNINIT(idr_preload_uninit, SI_SUB_LOCK, SI_ORDER_FIRST, idr_preload_uninit, N
 void
 drmkpi_idr_preload(gfp_t gfp_mask)
 {
-	struct linux_idr_cache *lic;
+	struct drmkpi_idr_cache *lic;
 	struct idr_layer *cacheval;
 
 	sched_pin();
 
-	lic = &DPCPU_GET(linux_idr_cache);
+	lic = &DPCPU_GET(drmkpi_idr_cache);
 
 	/* fill up cache */
 	spin_lock(&lic->lock);
@@ -153,9 +153,9 @@ drmkpi_idr_preload(gfp_t gfp_mask)
 void
 drmkpi_idr_preload_end(void)
 {
-	struct linux_idr_cache *lic;
+	struct drmkpi_idr_cache *lic;
 
-	lic = &DPCPU_GET(linux_idr_cache);
+	lic = &DPCPU_GET(drmkpi_idr_cache);
 	spin_unlock(&lic->lock);
 	sched_unpin();
 }
@@ -413,7 +413,7 @@ idr_get(struct idr *idp)
 		MPASS(il->bitmap != 0);
 	} else if ((il = malloc(sizeof(*il), M_IDR, M_ZERO | M_NOWAIT)) != NULL) {
 		bitmap_fill(&il->bitmap, IDR_SIZE);
-	} else if ((il = idr_preload_dequeue_locked(&DPCPU_GET(linux_idr_cache))) != NULL) {
+	} else if ((il = idr_preload_dequeue_locked(&DPCPU_GET(drmkpi_idr_cache))) != NULL) {
 		bitmap_fill(&il->bitmap, IDR_SIZE);
 	} else {
 		return (NULL);
