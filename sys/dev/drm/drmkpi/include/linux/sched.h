@@ -73,13 +73,6 @@
 #define	need_resched() (curthread->td_flags & TDF_NEEDRESCHED)
 
 #define	signal_pending(task)		drmkpi_signal_pending(task)
-#define	fatal_signal_pending(task)	drmkpi_fatal_signal_pending(task)
-#define	signal_pending_state(state, task)		\
-	drmkpi_signal_pending_state(state, task)
-#define	send_sig(signo, task, priv) do {		\
-	CTASSERT((priv) == 0);				\
-	drmkp_send_sig(signo, task);			\
-} while (0)
 
 #define	schedule()					\
 	(void)drmkpi_schedule_timeout(MAX_SCHEDULE_TIMEOUT)

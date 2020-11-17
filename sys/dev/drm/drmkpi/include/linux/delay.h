@@ -42,36 +42,18 @@ linux_msleep(unsigned int ms)
 	/* guard against invalid values */
 	if (ms == 0)
 		ms = 1;
-	pause_sbt("lnxsleep", mstosbt(ms), 0, C_HARDCLOCK);
+	pause_sbt("drmsleep", mstosbt(ms), 0, C_HARDCLOCK);
 }
 
 #undef msleep
 #define	msleep(ms) linux_msleep(ms)
 
-#undef msleep_interruptible
-#define	msleep_interruptible(ms) drmkpi_msleep_interruptible(ms)
-
 #define	udelay(t)	DELAY(t)
-
-static inline void
-mdelay(unsigned long msecs)
-{
-	while (msecs--)
-		DELAY(1000);
-}
-
-static inline void
-ndelay(unsigned long x)
-{
-	DELAY(howmany(x, 1000));
-}
 
 static inline void
 usleep_range(unsigned long min, unsigned long max)
 {
 	DELAY(min);
 }
-
-extern unsigned int linux_msleep_interruptible(unsigned int ms);
 
 #endif	/* __DRMKPI_LINUX_DELAY_H__ */

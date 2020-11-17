@@ -71,20 +71,11 @@ struct wait_queue_head {
  * renamed and furthermore must be the default wait queue callback.
  */
 extern wait_queue_func_t drmkpi_autoremove_wake_function;
-extern wait_queue_func_t drmkpi_default_wake_function;
 
-void drmkpi_wake_up_bit(void *, int);
-int drmkpi_wait_on_bit_timeout(unsigned long *, int, unsigned int, int);
-void drmkpi_wake_up_atomic_t(atomic_t *);
-int drmkpi_wait_on_atomic_t(atomic_t *, unsigned int);
-
-void drmkpi_init_wait_entry(wait_queue_t *, int);
 void drmkpi_wake_up(wait_queue_head_t *, unsigned int, int, bool);
 
 int drmkpi_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
     unsigned int, spinlock_t *);
-
-bool drmkpi_waitqueue_active(wait_queue_head_t *);
 
 void drmkpi_prepare_to_wait(wait_queue_head_t *, wait_queue_t *, int);
 void drmkpi_finish_wait(wait_queue_head_t *, wait_queue_t *);

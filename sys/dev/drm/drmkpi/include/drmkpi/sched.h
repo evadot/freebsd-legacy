@@ -66,9 +66,6 @@ struct task_struct {
 })
 
 bool drmkpi_signal_pending(struct task_struct *task);
-bool drmkpi_fatal_signal_pending(struct task_struct *task);
-bool drmkpi_signal_pending_state(long state, struct task_struct *task);
-void drmkpi_send_sig(int signo, struct task_struct *task);
 
 int drmkpi_schedule_timeout(int timeout);
 

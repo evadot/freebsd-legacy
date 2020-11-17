@@ -39,9 +39,7 @@ int
 drmkpi_alloc_current(struct thread *td, int flags)
 {
 	struct proc *proc;
-	struct thread *td_other;
 	struct task_struct *ts;
-	struct task_struct *ts_other;
 
 	MPASS(td->td_lkpi_task == NULL);
 
@@ -57,15 +55,8 @@ drmkpi_alloc_current(struct thread *td, int flags)
 
 	proc = td->td_proc;
 
-	/* check if another thread already has a mm_struct */
-	PROC_LOCK(proc);
-	FOREACH_THREAD_IN_PROC(proc, td_other) {
-		ts_other = td_other->td_lkpi_task;
-		if (ts_other == NULL)
-			continue;
-	}
-
 	/* store pointer to task struct */
+	PROC_LOCK(proc);
 	td->td_lkpi_task = ts;
 	PROC_UNLOCK(proc);
 
