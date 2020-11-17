@@ -63,8 +63,6 @@ drmkpi_alloc_current(struct thread *td, int flags)
 	ts->comm = td->td_name;
 	ts->pid = td->td_tid;
 	atomic_set(&ts->state, TASK_RUNNING);
-	init_completion(&ts->parked);
-	init_completion(&ts->exited);
 
 	proc = td->td_proc;
 

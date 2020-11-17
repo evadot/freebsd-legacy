@@ -55,8 +55,6 @@ struct task_struct {
 	atomic_t state;
 	pid_t	pid;			/* struct thread -> td_tid */
 	const char    *comm;		/* struct thread -> td_name */
-	struct completion parked;
-	struct completion exited;
 #define	TS_RCU_TYPE_MAX 2
 	TAILQ_ENTRY(task_struct) rcu_entry[TS_RCU_TYPE_MAX];
 	int rcu_recurse[TS_RCU_TYPE_MAX];
