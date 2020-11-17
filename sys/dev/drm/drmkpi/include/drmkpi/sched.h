@@ -53,7 +53,6 @@ struct task_struct {
 	struct mm_struct *mm;
 	linux_task_fn_t *task_fn;
 	atomic_t state;
-	atomic_t kthread_flags;
 	pid_t	pid;	/* BSD thread ID */
 	const char    *comm;
 	struct completion parked;

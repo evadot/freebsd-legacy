@@ -59,7 +59,6 @@ drmkpi_alloc_current(struct thread *td, int flags)
 	}
 
 	/* setup new task structure */
-	atomic_set(&ts->kthread_flags, 0);
 	ts->task_thread = td;
 	ts->comm = td->td_name;
 	ts->pid = td->td_tid;
