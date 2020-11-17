@@ -59,8 +59,6 @@ struct task_struct {
 	atomic_t kthread_flags;
 	pid_t	pid;	/* BSD thread ID */
 	const char    *comm;
-	void   *bsd_ioctl_data;
-	unsigned bsd_ioctl_len;
 	struct completion parked;
 	struct completion exited;
 #define	TS_RCU_TYPE_MAX 2
