@@ -53,8 +53,8 @@ struct task_struct {
 	struct mm_struct *mm;
 	linux_task_fn_t *task_fn;
 	atomic_t state;
-	pid_t	pid;	/* BSD thread ID */
-	const char    *comm;
+	pid_t	pid;			/* struct thread -> td_tid */
+	const char    *comm;		/* struct thread -> td_name */
 	struct completion parked;
 	struct completion exited;
 #define	TS_RCU_TYPE_MAX 2
