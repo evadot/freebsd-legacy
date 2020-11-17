@@ -50,7 +50,6 @@
 struct work_struct;
 struct task_struct {
 	struct thread *task_thread;
-	struct mm_struct *mm;
 	linux_task_fn_t *task_fn;
 	atomic_t state;
 	pid_t	pid;			/* struct thread -> td_tid */

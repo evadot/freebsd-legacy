@@ -32,7 +32,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/malloc.h>
 
 #include <linux/compat.h>
-#include <linux/mm.h>
 
 static MALLOC_DEFINE(M_DRMKPI_CURRENT, "drmkpcurrent", "LinuxKPI task structure");
 
@@ -43,20 +42,12 @@ drmkpi_alloc_current(struct thread *td, int flags)
 	struct thread *td_other;
 	struct task_struct *ts;
 	struct task_struct *ts_other;
-	struct mm_struct *mm;
-	struct mm_struct *mm_other;
 
 	MPASS(td->td_lkpi_task == NULL);
 
 	ts = malloc(sizeof(*ts), M_DRMKPI_CURRENT, flags | M_ZERO);
 	if (ts == NULL)
 		return (ENOMEM);
-
-	mm = malloc(sizeof(*mm), M_DRMKPI_CURRENT, flags | M_ZERO);
-	if (mm == NULL) {
-		free(ts, M_DRMKPI_CURRENT);
-		return (ENOMEM);
-	}
 
 	/* setup new task structure */
 	ts->task_thread = td;
@@ -72,36 +63,11 @@ drmkpi_alloc_current(struct thread *td, int flags)
 		ts_other = td_other->td_lkpi_task;
 		if (ts_other == NULL)
 			continue;
-
-		mm_other = ts_other->mm;
-		if (mm_other == NULL)
-			continue;
-
-		/* try to share other mm_struct */
-		if (atomic_inc_not_zero(&mm_other->mm_users)) {
-			/* set mm_struct pointer */
-			ts->mm = mm_other;
-			break;
-		}
-	}
-
-	/* use allocated mm_struct as a fallback */
-	if (ts->mm == NULL) {
-		/* setup new mm_struct */
-		atomic_set(&mm->mm_count, 1);
-		atomic_set(&mm->mm_users, 1);
-		/* set mm_struct pointer */
-		ts->mm = mm;
-		/* clear pointer to not free memory */
-		mm = NULL;
 	}
 
 	/* store pointer to task struct */
 	td->td_lkpi_task = ts;
 	PROC_UNLOCK(proc);
-
-	/* free mm_struct pointer, if any */
-	free(mm, M_DRMKPI_CURRENT);
 
 	return (0);
 }
