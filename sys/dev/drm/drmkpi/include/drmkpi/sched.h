@@ -54,7 +54,6 @@ struct task_struct {
 	linux_task_fn_t *task_fn;
 	void   *task_data;
 	int	task_ret;
-	atomic_t usage;
 	atomic_t state;
 	atomic_t kthread_flags;
 	pid_t	pid;	/* BSD thread ID */

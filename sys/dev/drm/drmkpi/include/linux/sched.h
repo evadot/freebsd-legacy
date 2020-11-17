@@ -65,19 +65,6 @@
 #define	set_current_state(x)		set_task_state(current, x)
 #define	__set_current_state(x)		__set_task_state(current, x)
 
-static inline void
-get_task_struct(struct task_struct *task)
-{
-	atomic_inc(&task->usage);
-}
-
-static inline void
-put_task_struct(struct task_struct *task)
-{
-	if (atomic_dec_and_test(&task->usage))
-		drmkpi_free_current(task);
-}
-
 #define	cond_resched()	do { if (!cold) sched_relinquish(curthread); } while (0)
 
 #define	yield()		kern_yield(PRI_UNCHANGED)
