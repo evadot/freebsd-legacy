@@ -2,7 +2,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- *  Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
+ *  Copyright (c) 2009-2020 Alexander Motin <mav@FreeBSD.org>
  *  Copyright (c) 1997-2009 by Matthew Jacob
  *  All rights reserved.
  *
@@ -65,13 +65,10 @@ struct ispmdvec {
 	uint32_t	(*dv_rd_reg) (ispsoftc_t *, int);
 	void		(*dv_wr_reg) (ispsoftc_t *, int, uint32_t);
 	int		(*dv_mbxdma) (ispsoftc_t *);
-	int		(*dv_dmaset) (ispsoftc_t *, XS_T *, void *);
-	void		(*dv_dmaclr) (ispsoftc_t *, XS_T *, uint32_t);
+	int		(*dv_send_cmd) (ispsoftc_t *, void *, void *, uint32_t);
 	int		(*dv_irqsetup) (ispsoftc_t *);
 	void		(*dv_dregs) (ispsoftc_t *, const char *);
 	const void *	dv_ispfw;	/* ptr to f/w */
-	uint16_t	dv_conf1;
-	uint16_t	dv_clock;	/* clock frequency */
 };
 
 /*
@@ -81,8 +78,7 @@ struct ispmdvec {
 #ifndef	MAX_FC_TARG
 #define	MAX_FC_TARG		1024
 #endif
-#define	ISP_MAX_TARGETS(isp)	(IS_FC(isp)? MAX_FC_TARG : MAX_TARGETS)
-#define	ISP_MAX_LUNS(isp)	(isp)->isp_maxluns
+#define	ISP_MAX_TARGETS(isp)	MAX_FC_TARG
 #define	ISP_MAX_IRQS		3
 
 /*
@@ -101,12 +97,8 @@ struct ispmdvec {
 #define	ISP_MBOXDMASETUP(isp)	\
 	(*(isp)->isp_mdvec->dv_mbxdma)((isp))
 
-#define	ISP_DMASETUP(isp, xs, req)	\
-	(*(isp)->isp_mdvec->dv_dmaset)((isp), (xs), (req))
-
-#define	ISP_DMAFREE(isp, xs, hndl)		\
-	if ((isp)->isp_mdvec->dv_dmaclr)	\
-	    (*(isp)->isp_mdvec->dv_dmaclr)((isp), (xs), (hndl))
+#define	ISP_SEND_CMD(isp, qe, segp, nseg)	\
+	(*(isp)->isp_mdvec->dv_send_cmd)((isp), (qe), (segp), (nseg))
 
 #define	ISP_IRQSETUP(isp)	\
 	(((isp)->isp_mdvec->dv_irqsetup) ? (*(isp)->isp_mdvec->dv_irqsetup)(isp) : 0)
@@ -136,20 +128,15 @@ struct ispmdvec {
 
 /*
  * Request/Response Queue defines and macros.
- * The maximum is defined per platform (and can be based on board type).
  */
 /* This is the size of a queue entry (request and response) */
 #define	QENTRY_LEN			64
-/* Both request and result queue length must be a power of two */
-#define	RQUEST_QUEUE_LEN(x)		MAXISPREQUEST(x)
-#ifdef	ISP_TARGET_MODE
-#define	RESULT_QUEUE_LEN(x)		MAXISPREQUEST(x)
-#else
-#define	RESULT_QUEUE_LEN(x)		\
-	(((MAXISPREQUEST(x) >> 2) < 64)? 64 : MAXISPREQUEST(x) >> 2)
-#endif
-#define	ISP_QUEUE_ENTRY(q, idx)		(((uint8_t *)q) + ((idx) * QENTRY_LEN))
-#define	ISP_QUEUE_SIZE(n)		((n) * QENTRY_LEN)
+/* Queue lengths must be a power of two and at least 8 elements. */
+#define	RQUEST_QUEUE_LEN(x)		8192
+#define	RESULT_QUEUE_LEN(x)		1024
+#define	ATIO_QUEUE_LEN(x)		1024
+#define	ISP_QUEUE_ENTRY(q, idx)		(((uint8_t *)q) + ((size_t)(idx) * QENTRY_LEN))
+#define	ISP_QUEUE_SIZE(n)		((size_t)(n) * QENTRY_LEN)
 #define	ISP_NXT_QENTRY(idx, qlen)	(((idx) + 1) & ((qlen)-1))
 #define	ISP_QFREE(in, out, qlen)	\
 	((in == out)? (qlen - 1) : ((in > out)? \
@@ -159,94 +146,17 @@ struct ispmdvec {
 
 #define	ISP_ADD_REQUEST(isp, nxti)						\
 	MEMORYBARRIER(isp, SYNC_REQUEST, isp->isp_reqidx, QENTRY_LEN, -1);	\
-	ISP_WRITE(isp, isp->isp_rqstinrp, nxti);				\
+	ISP_WRITE(isp, BIU2400_REQINP, nxti);					\
 	isp->isp_reqidx = nxti
 
 #define	ISP_SYNC_REQUEST(isp)								\
 	MEMORYBARRIER(isp, SYNC_REQUEST, isp->isp_reqidx, QENTRY_LEN, -1);		\
 	isp->isp_reqidx = ISP_NXT_QENTRY(isp->isp_reqidx, RQUEST_QUEUE_LEN(isp));	\
-	ISP_WRITE(isp, isp->isp_rqstinrp, isp->isp_reqidx)
-
-/*
- * SCSI Specific Host Adapter Parameters- per bus, per target
- */
-typedef struct {
-	uint32_t 				: 8,
-			update			: 1,
-			sendmarker		: 1,
-			isp_req_ack_active_neg	: 1,
-			isp_data_line_active_neg: 1,
-			isp_cmd_dma_burst_enable: 1,
-			isp_data_dma_burst_enabl: 1,
-			isp_fifo_threshold	: 3,
-			isp_ptisp		: 1,
-			isp_ultramode		: 1,
-			isp_diffmode		: 1,
-			isp_lvdmode		: 1,
-			isp_fast_mttr		: 1,	/* fast sram */
-			isp_initiator_id	: 4,
-			isp_async_data_setup	: 4;
-	uint16_t	isp_selection_timeout;
-	uint16_t	isp_max_queue_depth;
-	uint8_t		isp_tag_aging;
-	uint8_t		isp_bus_reset_delay;
-	uint8_t		isp_retry_count;
-	uint8_t		isp_retry_delay;
-	struct {
-		uint32_t
-			exc_throttle	:	8,
-					:	1,
-			dev_enable	:	1,	/* ignored */
-			dev_update	:	1,
-			dev_refresh	:	1,
-			actv_offset	:	4,
-			goal_offset	:	4,
-			nvrm_offset	:	4;
-		uint8_t		actv_period;	/* current sync period */
-		uint8_t		goal_period;	/* goal sync period */
-		uint8_t		nvrm_period;	/* nvram sync period */
-		uint16_t	actv_flags;	/* current device flags */
-		uint16_t	goal_flags;	/* goal device flags */
-		uint16_t	nvrm_flags;	/* nvram device flags */
-	} isp_devparam[MAX_TARGETS];
-} sdparam;
-
-/*
- * Device Flags
- */
-#define	DPARM_DISC	0x8000
-#define	DPARM_PARITY	0x4000
-#define	DPARM_WIDE	0x2000
-#define	DPARM_SYNC	0x1000
-#define	DPARM_TQING	0x0800
-#define	DPARM_ARQ	0x0400
-#define	DPARM_QFRZ	0x0200
-#define	DPARM_RENEG	0x0100
-#define	DPARM_NARROW	0x0080
-#define	DPARM_ASYNC	0x0040
-#define	DPARM_PPR	0x0020
-#define	DPARM_DEFAULT	(0xFF00 & ~DPARM_QFRZ)
-#define	DPARM_SAFE_DFLT	(DPARM_DEFAULT & ~(DPARM_WIDE|DPARM_SYNC|DPARM_TQING))
-
-/* technically, not really correct, as they need to be rated based upon clock */
-#define	ISP_80M_SYNCPARMS	0x0c09
-#define	ISP_40M_SYNCPARMS	0x0c0a
-#define	ISP_20M_SYNCPARMS	0x0c0c
-#define	ISP_20M_SYNCPARMS_1040	0x080c
-#define	ISP_10M_SYNCPARMS	0x0c19
-#define	ISP_08M_SYNCPARMS	0x0c25
-#define	ISP_05M_SYNCPARMS	0x0c32
-#define	ISP_04M_SYNCPARMS	0x0c41
+	ISP_WRITE(isp, BIU2400_REQINP, isp->isp_reqidx)
 
 /*
  * Fibre Channel Specifics
  */
-/* These are for non-2K Login Firmware cards */
-#define	FL_ID			0x7e	/* FL_Port Special ID */
-#define	SNS_ID			0x80	/* SNS Server Special ID */
-#define	NPH_MAX			0xfe
-
-/* These are for 2K Login Firmware cards */
 #define	NPH_RESERVED		0x7F0	/* begin of reserved N-port handles */
 #define	NPH_MGT_ID		0x7FA	/* Management Server Special ID */
 #define	NPH_SNS_ID		0x7FC	/* SNS Server Special ID */
@@ -543,27 +453,19 @@ struct ispsoftc {
 	uint8_t			isp_revision;	/* HBA Chip H/W Revision */
 	uint8_t			isp_nirq;	/* number of IRQs */
 	uint16_t		isp_nchan;	/* number of channels */
-	uint32_t		isp_maxluns;	/* maximum luns supported */
 
 	uint32_t		isp_clock	: 8,	/* input clock */
 						: 5,
 				isp_port	: 1,	/* 23XX/24XX only */
-				isp_bustype	: 1,	/* SBus or PCI */
 				isp_loaded_fw	: 1,	/* loaded firmware */
 				isp_dblev	: 16;	/* debug log mask */
 
 
 	uint32_t		isp_confopts;	/* config options */
 
-	uint32_t		isp_rqstinrp;	/* register for REQINP */
-	uint32_t		isp_rqstoutrp;	/* register for REQOUTP */
-	uint32_t		isp_respinrp;	/* register for RESINP */
-	uint32_t		isp_respoutrp;	/* register for RESOUTP */
-
 	/*
 	 * Volatile state
 	 */
-
 	volatile u_int		isp_mboxbsy;	/* mailbox command active */
 	volatile u_int		isp_state;
 	volatile mbreg_t	isp_curmbx;	/* currently active mailbox command */
@@ -604,20 +506,13 @@ struct ispsoftc {
 #endif
 };
 
-#define	SDPARAM(isp, chan)	(&((sdparam *)(isp)->isp_param)[(chan)])
 #define	FCPARAM(isp, chan)	(&((fcparam *)(isp)->isp_param)[(chan)])
 
 #define	ISP_SET_SENDMARKER(isp, chan, val)	\
-    if (IS_FC(isp)) {				\
-	FCPARAM(isp, chan)->sendmarker = val;	\
-    } else {					\
-	SDPARAM(isp, chan)->sendmarker = val;	\
-    }
+    FCPARAM(isp, chan)->sendmarker = val	\
 
 #define	ISP_TST_SENDMARKER(isp, chan)		\
-    (IS_FC(isp)?				\
-	FCPARAM(isp, chan)->sendmarker != 0 :	\
-	SDPARAM(isp, chan)->sendmarker != 0)
+    (FCPARAM(isp, chan)->sendmarker != 0)
 
 /*
  * ISP Driver Run States
@@ -713,69 +608,13 @@ struct ispsoftc {
  (ISP_FW_REVX((i)->isp_fwrev) < ISP_FW_REV(major, minor, micro))
 
 /*
- * Bus (implementation) types
- */
-#define	ISP_BT_PCI		0	/* PCI Implementations */
-#define	ISP_BT_SBUS		1	/* SBus Implementations */
-
-/*
- * If we have not otherwise defined SBus support away make sure
- * it is defined here such that the code is included as default
- */
-#ifndef	ISP_SBUS_SUPPORTED
-#define	ISP_SBUS_SUPPORTED	1
-#endif
-
-/*
  * Chip Types
  */
-#define	ISP_HA_SCSI		0xf
-#define	ISP_HA_SCSI_UNKNOWN	0x1
-#define	ISP_HA_SCSI_1020	0x2
-#define	ISP_HA_SCSI_1020A	0x3
-#define	ISP_HA_SCSI_1040	0x4
-#define	ISP_HA_SCSI_1040A	0x5
-#define	ISP_HA_SCSI_1040B	0x6
-#define	ISP_HA_SCSI_1040C	0x7
-#define	ISP_HA_SCSI_1240	0x8
-#define	ISP_HA_SCSI_1080	0x9
-#define	ISP_HA_SCSI_1280	0xa
-#define	ISP_HA_SCSI_10160	0xb
-#define	ISP_HA_SCSI_12160	0xc
-#define	ISP_HA_FC		0xf0
-#define	ISP_HA_FC_2100		0x10
-#define	ISP_HA_FC_2200		0x20
-#define	ISP_HA_FC_2300		0x30
-#define	ISP_HA_FC_2312		0x40
-#define	ISP_HA_FC_2322		0x50
-#define	ISP_HA_FC_2400		0x60
-#define	ISP_HA_FC_2500		0x70
-#define	ISP_HA_FC_2600		0x80
-#define	ISP_HA_FC_2700		0x90
+#define	ISP_HA_FC_2400		0x04
+#define	ISP_HA_FC_2500		0x05
+#define	ISP_HA_FC_2600		0x06
+#define	ISP_HA_FC_2700		0x07
 
-#define	IS_SCSI(isp)	(isp->isp_type & ISP_HA_SCSI)
-#define	IS_1020(isp)	(isp->isp_type < ISP_HA_SCSI_1240)
-#define	IS_1240(isp)	(isp->isp_type == ISP_HA_SCSI_1240)
-#define	IS_1080(isp)	(isp->isp_type == ISP_HA_SCSI_1080)
-#define	IS_1280(isp)	(isp->isp_type == ISP_HA_SCSI_1280)
-#define	IS_10160(isp)	(isp->isp_type == ISP_HA_SCSI_10160)
-#define	IS_12160(isp)	(isp->isp_type == ISP_HA_SCSI_12160)
-
-#define	IS_12X0(isp)	(IS_1240(isp) || IS_1280(isp))
-#define	IS_1X160(isp)	(IS_10160(isp) || IS_12160(isp))
-#define	IS_DUALBUS(isp)	(IS_12X0(isp) || IS_12160(isp))
-#define	IS_ULTRA2(isp)	(IS_1080(isp) || IS_1280(isp) || IS_1X160(isp))
-#define	IS_ULTRA3(isp)	(IS_1X160(isp))
-
-#define	IS_FC(isp)	((isp)->isp_type & ISP_HA_FC)
-#define	IS_2100(isp)	((isp)->isp_type == ISP_HA_FC_2100)
-#define	IS_2200(isp)	((isp)->isp_type == ISP_HA_FC_2200)
-#define	IS_23XX(isp)	((isp)->isp_type >= ISP_HA_FC_2300 && \
-				(isp)->isp_type < ISP_HA_FC_2400)
-#define	IS_2300(isp)	((isp)->isp_type == ISP_HA_FC_2300)
-#define	IS_2312(isp)	((isp)->isp_type == ISP_HA_FC_2312)
-#define	IS_2322(isp)	((isp)->isp_type == ISP_HA_FC_2322)
-#define	IS_24XX(isp)	((isp)->isp_type >= ISP_HA_FC_2400)
 #define	IS_25XX(isp)	((isp)->isp_type >= ISP_HA_FC_2500)
 #define	IS_26XX(isp)	((isp)->isp_type >= ISP_HA_FC_2600)
 #define	IS_27XX(isp)	((isp)->isp_type >= ISP_HA_FC_2700)
@@ -834,8 +673,7 @@ int isp_start(XS_T *);
 /* these values are what isp_start returns */
 #define	CMD_COMPLETE	101	/* command completed */
 #define	CMD_EAGAIN	102	/* busy- maybe retry later */
-#define	CMD_QUEUED	103	/* command has been queued for execution */
-#define	CMD_RQLATER 	104	/* requeue this command later */
+#define	CMD_RQLATER	103	/* requeue this command later */
 
 /*
  * Command Completion Point- Core layers call out from this with completed cmds
@@ -868,8 +706,6 @@ void isp_done(XS_T *);
  *        Send a LIP on this channel
  * ... ISPCTL_GET_NAMES, int channel, int np, uint64_t *wwnn, uint64_t *wwpn)
  *        Get a WWNN/WWPN for this N-port handle on this channel
- * ... ISPCTL_RUN_MBOXCMD, mbreg_t *mbp)
- *        Run this mailbox command
  * ... ISPCTL_GET_PDB, int channel, int nphandle, isp_pdb_t *pdb)
  *        Get PDB on this channel for this N-port handle
  * ... ISPCTL_PLOGX, isp_plcmd_t *)
@@ -895,7 +731,6 @@ typedef enum {
 	ISPCTL_PDB_SYNC,
 	ISPCTL_SEND_LIP,
 	ISPCTL_GET_NAMES,
-	ISPCTL_RUN_MBOXCMD,
 	ISPCTL_GET_PDB,
 	ISPCTL_PLOGX,
 	ISPCTL_CHANGE_ROLE
@@ -907,7 +742,6 @@ int isp_control(ispsoftc_t *, ispctl_t, ...);
  */
 
 typedef enum {
-	ISPASYNC_NEW_TGT_PARAMS,	/* SPI New Target Parameters */
 	ISPASYNC_BUS_RESET,		/* All Bus Was Reset */
 	ISPASYNC_LOOP_DOWN,		/* FC Loop Down */
 	ISPASYNC_LOOP_UP,		/* FC Loop Up */
@@ -1014,9 +848,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *
  *	XS_T			Platform SCSI transaction type (i.e., command for HBA)
  *	XS_DMA_ADDR_T		Platform PCI DMA Address Type
- *	XS_GET_DMA_SEG(..)	Get 32 bit dma segment list value
  *	XS_GET_DMA64_SEG(..)	Get 64 bit dma segment list value
- *	XS_NEED_DMA64_SEG(..)	dma segment needs 64 bit storage
  *	XS_ISP(xs)		gets an instance out of an XS_T
  *	XS_CHANNEL(xs)		gets the channel (bus # for DUALBUS cards) ""
  *	XS_TGT(xs)		gets the target ""
@@ -1024,6 +856,8 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_CDBP(xs)		gets a pointer to the scsi CDB ""
  *	XS_CDBLEN(xs)		gets the CDB's length ""
  *	XS_XFRLEN(xs)		gets the associated data transfer length ""
+ *	XS_XFRIN(xs)		gets IN direction
+ *	XS_XFROUT(xs)		gets OUT direction
  *	XS_TIME(xs)		gets the time (in seconds) for this command
  *	XS_GET_RESID(xs)	gets the current residual count
  *	XS_GET_RESID(xs, resid)	sets the current residual count
@@ -1062,7 +896,6 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	DEFAULT_EXEC_THROTTLE(ispsoftc_t *)	Default Execution Throttle
  *
  *	DEFAULT_ROLE(ispsoftc_t *, int)		Get Default Role for a channel
- *	DEFAULT_IID(ispsoftc_t *, int)		Default SCSI initiator ID
  *	DEFAULT_LOOPID(ispsoftc_t *, int)	Default FC Loop ID
  *
  *		These establish reasonable defaults for each platform.
@@ -1106,7 +939,7 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
 /*
  * This function handles new response queue entry appropriate for target mode.
  */
-int isp_target_notify(ispsoftc_t *, void *, uint32_t *);
+int isp_target_notify(ispsoftc_t *, void *, uint32_t *, uint16_t);
 
 /*
  * This function externalizes the ability to acknowledge an Immediate Notify request.
@@ -1122,14 +955,6 @@ int isp_acknak_abts(ispsoftc_t *, void *, int);
  * General request queue 'put' routine for target mode entries.
  */
 int isp_target_put_entry(ispsoftc_t *isp, void *);
-
-/*
- * General routine to put back an ATIO entry-
- * used for replenishing f/w resource counts.
- * The argument is a pointer to a source ATIO
- * or ATIO2.
- */
-int isp_target_put_atio(ispsoftc_t *, void *);
 
 /*
  * General routine to send a final CTIO for a command- used mostly for

@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/syscallsubr.h>
 #include <sys/sysent.h>
 #include <sys/turnstile.h>
+#include <sys/taskqueue.h>
 #include <sys/ktr.h>
 #include <sys/rwlock.h>
 #include <sys/umtx.h>
@@ -64,9 +65,11 @@ __FBSDID("$FreeBSD$");
 
 #include <security/audit/audit.h>
 
+#include <vm/pmap.h>
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
 #include <vm/uma.h>
+#include <vm/vm_phys.h>
 #include <sys/eventhandler.h>
 
 /*
@@ -88,15 +91,15 @@ _Static_assert(offsetof(struct thread, td_frame) == 0x4a0,
     "struct thread KBI td_frame");
 _Static_assert(offsetof(struct thread, td_emuldata) == 0x6b0,
     "struct thread KBI td_emuldata");
-_Static_assert(offsetof(struct proc, p_flag) == 0xb0,
+_Static_assert(offsetof(struct proc, p_flag) == 0xb8,
     "struct proc KBI p_flag");
-_Static_assert(offsetof(struct proc, p_pid) == 0xbc,
+_Static_assert(offsetof(struct proc, p_pid) == 0xc4,
     "struct proc KBI p_pid");
-_Static_assert(offsetof(struct proc, p_filemon) == 0x3b8,
+_Static_assert(offsetof(struct proc, p_filemon) == 0x3c0,
     "struct proc KBI p_filemon");
-_Static_assert(offsetof(struct proc, p_comm) == 0x3d0,
+_Static_assert(offsetof(struct proc, p_comm) == 0x3d8,
     "struct proc KBI p_comm");
-_Static_assert(offsetof(struct proc, p_emuldata) == 0x4b0,
+_Static_assert(offsetof(struct proc, p_emuldata) == 0x4b8,
     "struct proc KBI p_emuldata");
 #endif
 #ifdef __i386__
@@ -108,15 +111,15 @@ _Static_assert(offsetof(struct thread, td_frame) == 0x300,
     "struct thread KBI td_frame");
 _Static_assert(offsetof(struct thread, td_emuldata) == 0x344,
     "struct thread KBI td_emuldata");
-_Static_assert(offsetof(struct proc, p_flag) == 0x68,
+_Static_assert(offsetof(struct proc, p_flag) == 0x6c,
     "struct proc KBI p_flag");
-_Static_assert(offsetof(struct proc, p_pid) == 0x74,
+_Static_assert(offsetof(struct proc, p_pid) == 0x78,
     "struct proc KBI p_pid");
-_Static_assert(offsetof(struct proc, p_filemon) == 0x268,
+_Static_assert(offsetof(struct proc, p_filemon) == 0x26c,
     "struct proc KBI p_filemon");
-_Static_assert(offsetof(struct proc, p_comm) == 0x27c,
+_Static_assert(offsetof(struct proc, p_comm) == 0x280,
     "struct proc KBI p_comm");
-_Static_assert(offsetof(struct proc, p_emuldata) == 0x308,
+_Static_assert(offsetof(struct proc, p_emuldata) == 0x30c,
     "struct proc KBI p_emuldata");
 #endif
 
@@ -128,14 +131,25 @@ SDT_PROBE_DEFINE(proc, , , lwp__exit);
  */
 static uma_zone_t thread_zone;
 
-static __exclusive_cache_line struct thread *thread_zombies;
+struct thread_domain_data {
+	struct thread	*tdd_zombies;
+	int		tdd_reapticks;
+} __aligned(CACHE_LINE_SIZE);
+
+static struct thread_domain_data thread_domain_data[MAXMEMDOM];
+
+static struct task	thread_reap_task;
+static struct callout  	thread_reap_callout;
 
 static void thread_zombie(struct thread *);
+static void thread_reap_all(void);
+static void thread_reap_task_cb(void *, int);
+static void thread_reap_callout_cb(void *);
 static int thread_unsuspend_one(struct thread *td, struct proc *p,
     bool boundary);
 static void thread_free_batched(struct thread *td);
 
-static struct mtx tid_lock;
+static __exclusive_cache_line struct mtx tid_lock;
 static bitstr_t *tid_bitmap;
 
 static MALLOC_DEFINE(M_TIDHASH, "tidhash", "thread hash");
@@ -159,28 +173,43 @@ EVENTHANDLER_LIST_DEFINE(thread_init);
 EVENTHANDLER_LIST_DEFINE(thread_fini);
 
 static bool
-thread_count_inc(void)
+thread_count_inc_try(void)
 {
-	static struct timeval lastfail;
-	static int curfail;
 	int nthreads_new;
-
-	thread_reap();
 
 	nthreads_new = atomic_fetchadd_int(&nthreads, 1) + 1;
 	if (nthreads_new >= maxthread - 100) {
 		if (priv_check_cred(curthread->td_ucred, PRIV_MAXPROC) != 0 ||
 		    nthreads_new >= maxthread) {
 			atomic_subtract_int(&nthreads, 1);
-			if (ppsratecheck(&lastfail, &curfail, 1)) {
-				printf("maxthread limit exceeded by uid %u "
-				"(pid %d); consider increasing kern.maxthread\n",
-				curthread->td_ucred->cr_ruid, curproc->p_pid);
-			}
 			return (false);
 		}
 	}
 	return (true);
+}
+
+static bool
+thread_count_inc(void)
+{
+	static struct timeval lastfail;
+	static int curfail;
+
+	thread_reap();
+	if (thread_count_inc_try()) {
+		return (true);
+	}
+
+	thread_reap_all();
+	if (thread_count_inc_try()) {
+		return (true);
+	}
+
+	if (ppsratecheck(&lastfail, &curfail, 1)) {
+		printf("maxthread limit exceeded by uid %u "
+		    "(pid %d); consider increasing kern.maxthread\n",
+		    curthread->td_ucred->cr_ruid, curproc->p_pid);
+	}
+	return (false);
 }
 
 static void
@@ -259,6 +288,54 @@ tid_free_batch(lwpid_t *batch, int n)
 }
 
 /*
+ * Batching for thread reapping.
+ */
+struct tidbatch {
+	lwpid_t tab[16];
+	int n;
+};
+
+static void
+tidbatch_prep(struct tidbatch *tb)
+{
+
+	tb->n = 0;
+}
+
+static void
+tidbatch_add(struct tidbatch *tb, struct thread *td)
+{
+
+	KASSERT(tb->n < nitems(tb->tab),
+	    ("%s: count too high %d", __func__, tb->n));
+	tb->tab[tb->n] = td->td_tid;
+	tb->n++;
+}
+
+static void
+tidbatch_process(struct tidbatch *tb)
+{
+
+	KASSERT(tb->n <= nitems(tb->tab),
+	    ("%s: count too high %d", __func__, tb->n));
+	if (tb->n == nitems(tb->tab)) {
+		tid_free_batch(tb->tab, tb->n);
+		tb->n = 0;
+	}
+}
+
+static void
+tidbatch_final(struct tidbatch *tb)
+{
+
+	KASSERT(tb->n <= nitems(tb->tab),
+	    ("%s: count too high %d", __func__, tb->n));
+	if (tb->n != 0) {
+		tid_free_batch(tb->tab, tb->n);
+	}
+}
+
+/*
  * Prepare a thread for use.
  */
 static int
@@ -281,6 +358,7 @@ thread_ctor(void *mem, int size, void *arg, int flags)
 	audit_thread_alloc(td);
 #endif
 	umtx_thread_alloc(td);
+	MPASS(td->td_sel == NULL);
 	return (0);
 }
 
@@ -321,6 +399,7 @@ thread_dtor(void *mem, int size, void *arg)
 	osd_thread_exit(td);
 	td_softdep_cleanup(td);
 	MPASS(td->td_su == NULL);
+	seltdfini(td);
 }
 
 /*
@@ -357,7 +436,7 @@ thread_fini(void *mem, int size)
 	turnstile_free(td->td_turnstile);
 	sleepq_free(td->td_sleepqueue);
 	umtx_thread_fini(td);
-	seltdfini(td);
+	MPASS(td->td_sel == NULL);
 }
 
 /*
@@ -450,6 +529,10 @@ threadinit(void)
 	    M_TIDHASH, M_WAITOK | M_ZERO);
 	for (i = 0; i < tidhashlock + 1; i++)
 		rw_init(&tidhashtbl_lock[i], "tidhash");
+
+	TASK_INIT(&thread_reap_task, 0, thread_reap_task_cb, NULL);
+	callout_init(&thread_reap_callout, 1);
+	callout_reset(&thread_reap_callout, 5 * hz, thread_reap_callout_cb, NULL);
 }
 
 /*
@@ -458,12 +541,14 @@ threadinit(void)
 void
 thread_zombie(struct thread *td)
 {
+	struct thread_domain_data *tdd;
 	struct thread *ztd;
 
-	ztd = atomic_load_ptr(&thread_zombies);
+	tdd = &thread_domain_data[vm_phys_domain(vtophys(td))];
+	ztd = atomic_load_ptr(&tdd->tdd_zombies);
 	for (;;) {
 		td->td_zombie = ztd;
-		if (atomic_fcmpset_rel_ptr((uintptr_t *)&thread_zombies,
+		if (atomic_fcmpset_rel_ptr((uintptr_t *)&tdd->tdd_zombies,
 		    (uintptr_t *)&ztd, (uintptr_t)td))
 			break;
 		continue;
@@ -481,43 +566,136 @@ thread_stash(struct thread *td)
 }
 
 /*
- * Reap zombie threads.
+ * Reap zombies from passed domain.
  */
-void
-thread_reap(void)
+static void
+thread_reap_domain(struct thread_domain_data *tdd)
 {
 	struct thread *itd, *ntd;
-	lwpid_t tidbatch[16];
-	int tidbatchn;
+	struct tidbatch tidbatch;
+	struct credbatch credbatch;
+	int tdcount;
+	struct plimit *lim;
+	int limcount;
 
 	/*
 	 * Reading upfront is pessimal if followed by concurrent atomic_swap,
 	 * but most of the time the list is empty.
 	 */
-	if (thread_zombies == NULL)
+	if (tdd->tdd_zombies == NULL)
 		return;
 
-	itd = (struct thread *)atomic_swap_ptr((uintptr_t *)&thread_zombies,
+	itd = (struct thread *)atomic_swap_ptr((uintptr_t *)&tdd->tdd_zombies,
 	    (uintptr_t)NULL);
-	tidbatchn = 0;
+	if (itd == NULL)
+		return;
+
+	/*
+	 * Multiple CPUs can get here, the race is fine as ticks is only
+	 * advisory.
+	 */
+	tdd->tdd_reapticks = ticks;
+
+	tidbatch_prep(&tidbatch);
+	credbatch_prep(&credbatch);
+	tdcount = 0;
+	lim = NULL;
+	limcount = 0;
+
 	while (itd != NULL) {
 		ntd = itd->td_zombie;
-		tidbatch[tidbatchn] = itd->td_tid;
-		tidbatchn++;
-		thread_cow_free(itd);
+		EVENTHANDLER_DIRECT_INVOKE(thread_dtor, itd);
+		tidbatch_add(&tidbatch, itd);
+		credbatch_add(&credbatch, itd);
+		MPASS(itd->td_limit != NULL);
+		if (lim != itd->td_limit) {
+			if (limcount != 0) {
+				lim_freen(lim, limcount);
+				limcount = 0;
+			}
+		}
+		lim = itd->td_limit;
+		limcount++;
 		thread_free_batched(itd);
-		if (tidbatchn == nitems(tidbatch)) {
-			tid_free_batch(tidbatch, tidbatchn);
-			thread_count_sub(tidbatchn);
-			tidbatchn = 0;
+		tidbatch_process(&tidbatch);
+		credbatch_process(&credbatch);
+		tdcount++;
+		if (tdcount == 32) {
+			thread_count_sub(tdcount);
+			tdcount = 0;
 		}
 		itd = ntd;
 	}
 
-	if (tidbatchn != 0) {
-		tid_free_batch(tidbatch, tidbatchn);
-		thread_count_sub(tidbatchn);
+	tidbatch_final(&tidbatch);
+	credbatch_final(&credbatch);
+	if (tdcount != 0) {
+		thread_count_sub(tdcount);
 	}
+	MPASS(limcount != 0);
+	lim_freen(lim, limcount);
+}
+
+/*
+ * Reap zombies from all domains.
+ */
+static void
+thread_reap_all(void)
+{
+	struct thread_domain_data *tdd;
+	int i, domain;
+
+	domain = PCPU_GET(domain);
+	for (i = 0; i < vm_ndomains; i++) {
+		tdd = &thread_domain_data[(i + domain) % vm_ndomains];
+		thread_reap_domain(tdd);
+	}
+}
+
+/*
+ * Reap zombies from local domain.
+ */
+void
+thread_reap(void)
+{
+	struct thread_domain_data *tdd;
+	int domain;
+
+	domain = PCPU_GET(domain);
+	tdd = &thread_domain_data[domain];
+
+	thread_reap_domain(tdd);
+}
+
+static void
+thread_reap_task_cb(void *arg __unused, int pending __unused)
+{
+
+	thread_reap_all();
+}
+
+static void
+thread_reap_callout_cb(void *arg __unused)
+{
+	struct thread_domain_data *tdd;
+	int i, cticks, lticks;
+	bool wantreap;
+
+	wantreap = false;
+	cticks = atomic_load_int(&ticks);
+	for (i = 0; i < vm_ndomains; i++) {
+		tdd = &thread_domain_data[i];
+		lticks = tdd->tdd_reapticks;
+		if (tdd->tdd_zombies != NULL &&
+		    (u_int)(cticks - lticks) > 5 * hz) {
+			wantreap = true;
+			break;
+		}
+	}
+
+	if (wantreap)
+		taskqueue_enqueue(taskqueue_thread, &thread_reap_task);
+	callout_reset(&thread_reap_callout, 5 * hz, thread_reap_callout_cb, NULL);
 }
 
 /*
@@ -567,7 +745,6 @@ static void
 thread_free_batched(struct thread *td)
 {
 
-	EVENTHANDLER_DIRECT_INVOKE(thread_dtor, td);
 	lock_profile_thread_exit(td);
 	if (td->td_cpuset)
 		cpuset_rel(td->td_cpuset);
@@ -588,6 +765,7 @@ thread_free(struct thread *td)
 {
 	lwpid_t tid;
 
+	EVENTHANDLER_DIRECT_INVOKE(thread_dtor, td);
 	tid = td->td_tid;
 	thread_free_batched(td);
 	tid_free(tid);

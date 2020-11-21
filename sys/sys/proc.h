@@ -519,6 +519,7 @@ do {									\
 #define	TDP_SIGFASTPENDING 0x80000000 /* Pending signal due to sigfastblock */
 
 #define	TDP2_SBPAGES	0x00000001 /* Owns sbusy on some pages */
+#define	TDP2_COMPAT32RB	0x00000002 /* compat32 ABI for robust lists */
 
 /*
  * Reasons that the current thread can not be run yet.
@@ -596,6 +597,7 @@ struct proc {
 	struct ucred	*p_ucred;	/* (c) Process owner's identity. */
 	struct filedesc	*p_fd;		/* (b) Open files. */
 	struct filedesc_to_leader *p_fdtol; /* (b) Tracking node */
+	struct pwddesc	*p_pd;		/* (b) Cwd, chroot, jail, umask */
 	struct pstats	*p_stats;	/* (b) Accounting/statistics (CPU). */
 	struct plimit	*p_limit;	/* (c) Resource limits. */
 	struct callout	p_limco;	/* (c) Limit callout handle */
@@ -1015,7 +1017,8 @@ struct	fork_req {
 	int 		fr_pd_flags;
 	struct filecaps	*fr_pd_fcaps;
 	int 		fr_flags2;
-#define	FR2_DROPSIG_CAUGHT	0x00001	/* Drop caught non-DFL signals */
+#define	FR2_DROPSIG_CAUGHT	0x00000001 /* Drop caught non-DFL signals */
+#define	FR2_SHARE_PATHS		0x00000002 /* Invert sense of RFFDG for paths */
 };
 
 /*

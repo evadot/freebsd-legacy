@@ -62,6 +62,7 @@ struct sockaddr;
 struct stat;
 struct thr_param;
 struct uio;
+struct umtx_copyops;
 struct vm_map;
 struct vmspace;
 
@@ -79,6 +80,8 @@ struct mmap_req {
 
 int	kern___getcwd(struct thread *td, char *buf, enum uio_seg bufseg,
 	    size_t buflen, size_t path_max);
+int	kern__umtx_op(struct thread *td, void *obj, int op, unsigned long val,
+	    void *uaddr1, void *uaddr2, const struct umtx_copyops *ops);
 int	kern_accept(struct thread *td, int s, struct sockaddr **name,
 	    socklen_t *namelen, struct file **fp);
 int	kern_accept4(struct thread *td, int s, struct sockaddr **name,
@@ -137,6 +140,7 @@ int	kern_fchownat(struct thread *td, int fd, const char *path,
 	    enum uio_seg pathseg, int uid, int gid, int flag);
 int	kern_fcntl(struct thread *td, int fd, int cmd, intptr_t arg);
 int	kern_fcntl_freebsd(struct thread *td, int fd, int cmd, long arg);
+int	kern_fhopen(struct thread *td, const struct fhandle *u_fhp, int flags);
 int	kern_fhstat(struct thread *td, fhandle_t fh, struct stat *buf);
 int	kern_fhstatfs(struct thread *td, fhandle_t fh, struct statfs *buf);
 int	kern_fpathconf(struct thread *td, int fd, int name, long *valuep);
@@ -150,6 +154,8 @@ int	kern_futimens(struct thread *td, int fd, struct timespec *tptr,
 	    enum uio_seg tptrseg);
 int	kern_getdirentries(struct thread *td, int fd, char *buf, size_t count,
 	    off_t *basep, ssize_t *residp, enum uio_seg bufseg);
+int	kern_getfhat(struct thread *td, int flags, int fd, const char *path,
+	    enum uio_seg pathseg, fhandle_t *fhp, enum uio_seg fhseg);
 int	kern_getfsstat(struct thread *td, struct statfs **buf, size_t bufsize,
 	    size_t *countp, enum uio_seg bufseg, int mode);
 int	kern_getitimer(struct thread *, u_int, struct itimerval *);
