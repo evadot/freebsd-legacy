@@ -131,16 +131,17 @@ struct ispmdvec {
  */
 /* This is the size of a queue entry (request and response) */
 #define	QENTRY_LEN			64
-/* Queue lengths must be a power of two and at least 8 elements. */
+/*
+ * Hardware requires queue lengths of at least 8 elements.  Driver requires
+ * lengths to be a power of two, and request queue of at least 256 elements.
+ */
 #define	RQUEST_QUEUE_LEN(x)		8192
 #define	RESULT_QUEUE_LEN(x)		1024
 #define	ATIO_QUEUE_LEN(x)		1024
 #define	ISP_QUEUE_ENTRY(q, idx)		(((uint8_t *)q) + ((size_t)(idx) * QENTRY_LEN))
 #define	ISP_QUEUE_SIZE(n)		((size_t)(n) * QENTRY_LEN)
 #define	ISP_NXT_QENTRY(idx, qlen)	(((idx) + 1) & ((qlen)-1))
-#define	ISP_QFREE(in, out, qlen)	\
-	((in == out)? (qlen - 1) : ((in > out)? \
-	((qlen - 1) - (in - out)) : (out - in - 1)))
+#define	ISP_QFREE(in, out, qlen)	((out - in - 1) & ((qlen) - 1))
 #define	ISP_QAVAIL(isp)	\
 	ISP_QFREE(isp->isp_reqidx, isp->isp_reqodx, RQUEST_QUEUE_LEN(isp))
 
@@ -221,9 +222,9 @@ typedef struct {
 	uint32_t	handle;	/* handle associated with this command */
 } isp_hdl_t;
 #define	ISP_HANDLE_FREE		0x00000000
-#define	ISP_HANDLE_CMD_MASK	0x00001fff
-#define	ISP_HANDLE_USAGE_MASK	0x0000e000
-#define	ISP_HANDLE_USAGE_SHIFT	13
+#define	ISP_HANDLE_CMD_MASK	0x00003fff
+#define	ISP_HANDLE_USAGE_MASK	0x0000c000
+#define	ISP_HANDLE_USAGE_SHIFT	14
 #define	ISP_H2HT(hdl)	((hdl & ISP_HANDLE_USAGE_MASK) >> ISP_HANDLE_USAGE_SHIFT)
 #	define	ISP_HANDLE_NONE		0
 #	define	ISP_HANDLE_INITIATOR	1
@@ -232,13 +233,15 @@ typedef struct {
 #define	ISP_HANDLE_SEQ_MASK	0xffff0000
 #define	ISP_HANDLE_SEQ_SHIFT	16
 #define	ISP_H2SEQ(hdl)	((hdl & ISP_HANDLE_SEQ_MASK) >> ISP_HANDLE_SEQ_SHIFT)
-#define	ISP_VALID_HANDLE(c, hdl)	\
+#define	ISP_HANDLE_MAX		(ISP_HANDLE_CMD_MASK + 1)
+#define	ISP_HANDLE_RESERVE	256
+#define	ISP_HANDLE_NUM(isp)	((isp)->isp_maxcmds + ISP_HANDLE_RESERVE)
+#define	ISP_VALID_HANDLE(isp, hdl)	\
 	((ISP_H2HT(hdl) == ISP_HANDLE_INITIATOR || \
 	  ISP_H2HT(hdl) == ISP_HANDLE_TARGET || \
 	  ISP_H2HT(hdl) == ISP_HANDLE_CTRL) && \
-	 ((hdl) & ISP_HANDLE_CMD_MASK) < (c)->isp_maxcmds && \
-	 (hdl) == ((c)->isp_xflist[(hdl) & ISP_HANDLE_CMD_MASK].handle))
-#define	ISP_BAD_HANDLE_INDEX	0xffffffff
+	 ((hdl) & ISP_HANDLE_CMD_MASK) < ISP_HANDLE_NUM(isp) && \
+	 (hdl) == ((isp)->isp_xflist[(hdl) & ISP_HANDLE_CMD_MASK].handle))
 
 
 /*
@@ -359,7 +362,6 @@ typedef struct {
 	uint16_t		isp_loopid;		/* hard loop id */
 	uint16_t		isp_sns_hdl;		/* N-port handle for SNS */
 	uint16_t		isp_lasthdl;		/* only valid for channel 0 */
-	uint16_t		isp_maxalloc;
 	uint16_t		isp_fabric_params;
 	uint16_t		isp_login_hdl;		/* Logging in handle */
 	uint8_t			isp_retry_delay;
@@ -445,22 +447,16 @@ struct ispsoftc {
 	 * may contain some volatile state (e.g., current loop state).
 	 */
 
-	void * 			isp_param;	/* type specific */
+	fcparam			*isp_param;	/* Per-channel storage. */
 	uint64_t		isp_fwattr;	/* firmware attributes */
 	uint16_t		isp_fwrev[3];	/* Loaded F/W revision */
 	uint16_t		isp_maxcmds;	/* max possible I/O cmds */
+	uint16_t		isp_nchan;	/* number of channels */
+	uint16_t		isp_dblev;	/* debug log mask */
 	uint8_t			isp_type;	/* HBA Chip Type */
 	uint8_t			isp_revision;	/* HBA Chip H/W Revision */
 	uint8_t			isp_nirq;	/* number of IRQs */
-	uint16_t		isp_nchan;	/* number of channels */
-
-	uint32_t		isp_clock	: 8,	/* input clock */
-						: 5,
-				isp_port	: 1,	/* 23XX/24XX only */
-				isp_loaded_fw	: 1,	/* loaded firmware */
-				isp_dblev	: 16;	/* debug log mask */
-
-
+	uint8_t			isp_port;	/* physical port on a card */
 	uint32_t		isp_confopts;	/* config options */
 
 	/*
@@ -468,17 +464,15 @@ struct ispsoftc {
 	 */
 	volatile u_int		isp_mboxbsy;	/* mailbox command active */
 	volatile u_int		isp_state;
-	volatile mbreg_t	isp_curmbx;	/* currently active mailbox command */
 	volatile uint32_t	isp_reqodx;	/* index of last ISP pickup */
 	volatile uint32_t	isp_reqidx;	/* index of next request */
-	volatile uint32_t	isp_residx;	/* index of last ISP write */
 	volatile uint32_t	isp_resodx;	/* index of next result */
 	volatile uint32_t	isp_atioodx;	/* index of next ATIO */
 	volatile uint32_t	isp_obits;	/* mailbox command output */
 	volatile uint32_t	isp_serno;	/* rolling serial number */
 	volatile uint16_t	isp_mboxtmp[MAX_MAILBOX];
-	volatile uint16_t	isp_lastmbxcmd;	/* last mbox command sent */
 	volatile uint16_t	isp_seqno;	/* running sequence number */
+	u_int			isp_rqovf;	/* request queue overflow */
 
 	/*
 	 * Active commands are stored here, indexed by handle functions.
@@ -506,7 +500,7 @@ struct ispsoftc {
 #endif
 };
 
-#define	FCPARAM(isp, chan)	(&((fcparam *)(isp)->isp_param)[(chan)])
+#define	FCPARAM(isp, chan)	(&(isp)->isp_param[(chan)])
 
 #define	ISP_SET_SENDMARKER(isp, chan, val)	\
     FCPARAM(isp, chan)->sendmarker = val	\
@@ -541,7 +535,6 @@ struct ispsoftc {
 #define	ISP_CFG_FCTAPE		0x200	/* enable FC-Tape */
 #define	ISP_CFG_OWNFSZ		0x400	/* override NVRAM frame size */
 #define	ISP_CFG_OWNLOOPID	0x800	/* override NVRAM loopid */
-#define	ISP_CFG_OWNEXCTHROTTLE	0x1000	/* override NVRAM execution throttle */
 #define	ISP_CFG_4GB		0x2000	/* force 4Gb connection (24XX only) */
 #define	ISP_CFG_8GB		0x4000	/* force 8Gb connection (25XX only) */
 #define	ISP_CFG_16GB		0x8000	/* force 16Gb connection (26XX only) */
@@ -742,7 +735,6 @@ int isp_control(ispsoftc_t *, ispctl_t, ...);
  */
 
 typedef enum {
-	ISPASYNC_BUS_RESET,		/* All Bus Was Reset */
 	ISPASYNC_LOOP_DOWN,		/* FC Loop Down */
 	ISPASYNC_LOOP_UP,		/* FC Loop Up */
 	ISPASYNC_LIP,			/* FC LIP Received */
@@ -830,11 +822,6 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *		various objects so that the ISP's and the system's view
  *		of the same object is consistent.
  *
- *	MBOX_ACQUIRE(ispsoftc_t *)		acquire lock on mailbox regs
- *	MBOX_WAIT_COMPLETE(ispsoftc_t *, mbreg_t *) wait for cmd to be done
- *	MBOX_NOTIFY_COMPLETE(ispsoftc_t *)	notification of mbox cmd donee
- *	MBOX_RELEASE(ispsoftc_t *)		release lock on mailbox regs
- *
  *	FC_SCRATCH_ACQUIRE(ispsoftc_t *, chan)	acquire lock on FC scratch area
  *						return -1 if you cannot
  *	FC_SCRATCH_RELEASE(ispsoftc_t *, chan)	acquire lock on FC scratch area
@@ -893,7 +880,6 @@ void isp_async(ispsoftc_t *, ispasync_t, ...);
  *	XS_SENSE_VALID(xs)		indicates whether sense is valid
  *
  *	DEFAULT_FRAMESIZE(ispsoftc_t *)		Default Frame Size
- *	DEFAULT_EXEC_THROTTLE(ispsoftc_t *)	Default Execution Throttle
  *
  *	DEFAULT_ROLE(ispsoftc_t *, int)		Get Default Role for a channel
  *	DEFAULT_LOOPID(ispsoftc_t *, int)	Default FC Loop ID

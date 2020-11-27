@@ -870,7 +870,7 @@ kern_dup(struct thread *td, u_int mode, int flags, int old, int new)
 	struct filedesc *fdp;
 	struct filedescent *oldfde, *newfde;
 	struct proc *p;
-	struct file *delfp;
+	struct file *delfp, *oldfp;
 	u_long *oioctls, *nioctls;
 	int error, maxfd;
 
@@ -910,7 +910,8 @@ kern_dup(struct thread *td, u_int mode, int flags, int old, int new)
 	}
 
 	oldfde = &fdp->fd_ofiles[old];
-	if (!fhold(oldfde->fde_file))
+	oldfp = oldfde->fde_file;
+	if (!fhold(oldfp))
 		goto unlock;
 
 	/*
@@ -922,14 +923,14 @@ kern_dup(struct thread *td, u_int mode, int flags, int old, int new)
 	case FDDUP_NORMAL:
 	case FDDUP_FCNTL:
 		if ((error = fdalloc(td, new, &new)) != 0) {
-			fdrop(oldfde->fde_file, td);
+			fdrop(oldfp, td);
 			goto unlock;
 		}
 		break;
 	case FDDUP_MUSTREPLACE:
 		/* Target file descriptor must exist. */
 		if (fget_locked(fdp, new) == NULL) {
-			fdrop(oldfde->fde_file, td);
+			fdrop(oldfp, td);
 			goto unlock;
 		}
 		break;
@@ -948,7 +949,7 @@ kern_dup(struct thread *td, u_int mode, int flags, int old, int new)
 				error = racct_set_unlocked(p, RACCT_NOFILE, new + 1);
 				if (error != 0) {
 					error = EMFILE;
-					fdrop(oldfde->fde_file, td);
+					fdrop(oldfp, td);
 					goto unlock;
 				}
 			}
@@ -963,6 +964,12 @@ kern_dup(struct thread *td, u_int mode, int flags, int old, int new)
 	}
 
 	KASSERT(old != new, ("new fd is same as old"));
+
+	/* Refetch oldfde because the table may have grown and old one freed. */
+	oldfde = &fdp->fd_ofiles[old];
+	KASSERT(oldfp == oldfde->fde_file,
+	    ("fdt_ofiles shift from growth observed at fd %d",
+	    old));
 
 	newfde = &fdp->fd_ofiles[new];
 	delfp = newfde->fde_file;
@@ -1272,6 +1279,15 @@ closefp(struct filedesc *fdp, int fd, struct file *fp, struct thread *td,
 	FILEDESC_XUNLOCK(fdp);
 
 	error = closef(fp, td);
+
+	/*
+	 * All paths leading up to closefp() will have already removed or
+	 * replaced the fd in the filedesc table, so a restart would not
+	 * operate on the same file.
+	 */
+	if (error == ERESTART)
+		error = EINTR;
+
 	if (holdleaders) {
 		FILEDESC_XLOCK(fdp);
 		fdp->fd_holdleaderscount--;
@@ -1801,8 +1817,12 @@ fdgrowtable(struct filedesc *fdp, int nfd)
 	atomic_store_rel_ptr((volatile void *)&fdp->fd_files, (uintptr_t)ntable);
 
 	/*
-	 * Do not free the old file table, as some threads may still
-	 * reference entries within it.  Instead, place it on a freelist
+	 * Free the old file table when not shared by other threads or processes.
+	 * The old file table is considered to be shared when either are true:
+	 * - The process has more than one thread.
+	 * - The file descriptor table has been shared via fdshare().
+	 *
+	 * When shared, the old file table will be placed on a freelist
 	 * which will be processed when the struct filedesc is released.
 	 *
 	 * Note that if onfiles == NDFILE, we're dealing with the original
@@ -1810,10 +1830,14 @@ fdgrowtable(struct filedesc *fdp, int nfd)
 	 * which must not be freed.
 	 */
 	if (onfiles > NDFILE) {
-		ft = (struct freetable *)&otable->fdt_ofiles[onfiles];
-		fdp0 = (struct filedesc0 *)fdp;
-		ft->ft_table = otable;
-		SLIST_INSERT_HEAD(&fdp0->fd_free, ft, ft_next);
+		if (curproc->p_numthreads == 1 && fdp->fd_refcnt == 1)
+			free(otable, M_FILEDESC);
+		else {
+			ft = (struct freetable *)&otable->fdt_ofiles[onfiles];
+			fdp0 = (struct filedesc0 *)fdp;
+			ft->ft_table = otable;
+			SLIST_INSERT_HEAD(&fdp0->fd_free, ft, ft_next);
+		}
 	}
 	/*
 	 * The map does not have the same possibility of threads still

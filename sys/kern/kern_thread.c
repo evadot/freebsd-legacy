@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/sleepqueue.h>
 #include <sys/selinfo.h>
 #include <sys/syscallsubr.h>
+#include <sys/dtrace_bsd.h>
 #include <sys/sysent.h>
 #include <sys/turnstile.h>
 #include <sys/taskqueue.h>
@@ -142,6 +143,7 @@ static struct task	thread_reap_task;
 static struct callout  	thread_reap_callout;
 
 static void thread_zombie(struct thread *);
+static void thread_reap(void);
 static void thread_reap_all(void);
 static void thread_reap_task_cb(void *, int);
 static void thread_reap_callout_cb(void *);
@@ -357,6 +359,9 @@ thread_ctor(void *mem, int size, void *arg, int flags)
 #ifdef AUDIT
 	audit_thread_alloc(td);
 #endif
+#ifdef KDTRACE_HOOKS
+	kdtrace_thread_ctor(td);
+#endif
 	umtx_thread_alloc(td);
 	MPASS(td->td_sel == NULL);
 	return (0);
@@ -395,6 +400,9 @@ thread_dtor(void *mem, int size, void *arg)
 #ifdef AUDIT
 	audit_thread_free(td);
 #endif
+#ifdef KDTRACE_HOOKS
+	kdtrace_thread_dtor(td);
+#endif
 	/* Free all OSD associated to this thread. */
 	osd_thread_exit(td);
 	td_softdep_cleanup(td);
@@ -412,6 +420,7 @@ thread_init(void *mem, int size, int flags)
 
 	td = (struct thread *)mem;
 
+	td->td_allocdomain = vm_phys_domain(vtophys(td));
 	td->td_sleepqueue = sleepq_alloc();
 	td->td_turnstile = turnstile_alloc();
 	td->td_rlqe = NULL;
@@ -544,7 +553,7 @@ thread_zombie(struct thread *td)
 	struct thread_domain_data *tdd;
 	struct thread *ztd;
 
-	tdd = &thread_domain_data[vm_phys_domain(vtophys(td))];
+	tdd = &thread_domain_data[td->td_allocdomain];
 	ztd = atomic_load_ptr(&tdd->tdd_zombies);
 	for (;;) {
 		td->td_zombie = ztd;
@@ -655,7 +664,7 @@ thread_reap_all(void)
 /*
  * Reap zombies from local domain.
  */
-void
+static void
 thread_reap(void)
 {
 	struct thread_domain_data *tdd;

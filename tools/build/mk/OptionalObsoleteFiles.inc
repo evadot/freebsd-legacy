@@ -2601,7 +2601,6 @@ OLD_FILES+=usr/share/man/man5/rtadvd.conf.5.gz
 OLD_FILES+=usr/share/man/man8/ip6addrctl.8.gz
 OLD_FILES+=usr/share/man/man8/mld6query.8.gz
 OLD_FILES+=usr/share/man/man8/ndp.8.gz
-OLD_FILES+=usr/share/man/man8/ping6.8.gz
 OLD_FILES+=usr/share/man/man8/rip6query.8.gz
 OLD_FILES+=usr/share/man/man8/route6d.8.gz
 OLD_FILES+=usr/share/man/man8/rrenumd.8.gz
