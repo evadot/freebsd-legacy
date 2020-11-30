@@ -121,6 +121,7 @@ SUBDIR=	\
 	filemon \
 	firewire \
 	firmware \
+	${_ftwd} \
 	fusefs \
 	${_fxp} \
 	gem \
@@ -161,6 +162,7 @@ SUBDIR=	\
 	if_tuntap \
 	if_vlan \
 	if_vxlan \
+	if_wg \
 	iflib \
 	${_iir} \
 	imgact_binmisc \
@@ -618,6 +620,7 @@ _cpufreq=	cpufreq
 _dpms=		dpms
 _em=		em
 _et=		et
+_ftwd=		ftwd
 _exca=		exca
 _if_ndis=	if_ndis
 _io=		io
