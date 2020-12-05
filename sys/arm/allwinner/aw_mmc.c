@@ -265,6 +265,12 @@ aw_mmc_set_tran_settings(device_t dev, struct ccb_trans_settings_mmc *cts)
 		if (__predict_false(aw_mmc_debug & AW_MMC_DEBUG_IOS))
 			device_printf(sc->aw_dev, "Bus mode => %d\n", ios->bus_mode);
 	}
+	if (cts->ios_valid & MMC_VCCQ) {
+		ios->vccq = new_ios->vccq;
+		if (__predict_false(aw_mmc_debug & AW_MMC_DEBUG_IOS))
+			device_printf(sc->aw_dev, "VCCQ => %d\n", ios->vccq);
+	}
+
 
 	return (aw_mmc_update_ios(sc->aw_dev, NULL));
 }
