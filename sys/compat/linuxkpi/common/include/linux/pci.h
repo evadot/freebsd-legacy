@@ -702,6 +702,23 @@ pci_iounmap(struct pci_dev *dev, void *res)
 	}
 }
 
+static inline void
+linux_pci_save_state(struct pci_dev *pdev)
+{
+
+	pci_save_state(pdev->dev.bsddev);
+}
+
+static inline void
+linux_pci_restore_state(struct pci_dev *pdev)
+{
+
+	pci_restore_state(pdev->dev.bsddev);
+}
+
+#define pci_save_state(dev)	linux_pci_save_state(dev)
+#define pci_restore_state(dev)	linux_pci_restore_state(dev)
+
 #define DEFINE_PCI_DEVICE_TABLE(_table) \
 	const struct pci_device_id _table[] __devinitdata
 
@@ -1057,5 +1074,76 @@ pci_dev_present(const struct pci_device_id *cur)
 	}
 	return (0);
 }
+
+static inline bool
+pci_is_root_bus(struct pci_bus *pbus)
+{
+
+	return (pbus->self == NULL);
+}
+
+struct pci_dev *linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus, unsigned int devfn);
+#define	pci_get_domain_bus_and_slot(domain, bus, devfn)	\
+	linuxkpi_pci_get_domain_bus_and_slot(domain, bus, devfn)
+
+int linuxkpi_pci_domain_nr(struct pci_bus *bus);
+#define	pci_domain_nr(bus)	linuxkpi_pci_domain_nr(bus)
+
+static inline int
+pci_bus_read_config(struct pci_bus *bus, unsigned int devfn,
+                    int pos, uint32_t *val, int len)
+{
+	device_t dev;
+
+	dev = pci_find_dbsf(pci_get_domain(bus->self->dev.bsddev),
+	    pci_get_bus(bus->self->dev.bsddev),
+	    PCI_SLOT(devfn),
+	    PCI_FUNC(devfn));
+	*val = pci_read_config(dev, pos, len);
+	return (0);
+}
+
+static inline int
+pci_bus_read_config_word(struct pci_bus *bus, unsigned int devfn, int pos, u16 *val)
+{
+	return (pci_bus_read_config(bus, devfn, pos, (uint32_t *)val, 2));
+}
+
+static inline int
+pci_bus_read_config_byte(struct pci_bus *bus, unsigned int devfn, int pos, u8 *val)
+{
+	return (pci_bus_read_config(bus, devfn, pos, (uint32_t *)val, 1));
+}
+
+static inline int
+pci_bus_write_config(struct pci_bus *bus, unsigned int devfn, int pos,
+    uint32_t val, int size)
+{
+	device_t dev;
+
+	dev = pci_find_dbsf(pci_get_domain(bus->self->dev.bsddev),
+	    pci_get_bus(bus->self->dev.bsddev),
+	    PCI_SLOT(devfn),
+	    PCI_FUNC(devfn));
+	pci_write_config(dev, pos, val, size);
+	return (0);
+}
+
+static inline int
+pci_bus_write_config_byte(struct pci_bus *bus, unsigned int devfn, int pos,
+    uint8_t val)
+{
+	return (pci_bus_write_config(bus, devfn, pos, val, 1));
+}
+
+static inline int
+pci_bus_write_config_word(struct pci_bus *bus, unsigned int devfn, int pos,
+    uint16_t val)
+{
+	return (pci_bus_write_config(bus, devfn, pos, val, 2));
+}
+
+void linuxkpi_pci_dev_put(struct pci_dev *pdev);
+#define	pci_dev_put(pdev)	linuxkpi_pci_dev_put(pdev)
 
 #endif	/* _LINUX_PCI_H_ */

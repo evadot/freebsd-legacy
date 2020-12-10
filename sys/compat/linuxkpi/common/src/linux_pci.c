@@ -209,6 +209,38 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 	return (NULL);
 }
 
+struct pci_dev *
+linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
+    unsigned int devfn)
+{
+	device_t dev;
+	struct pci_dev *pdev;
+	struct pci_bus *pbus;
+
+	dev = pci_find_dbsf(domain, bus, PCI_SLOT(devfn), PCI_FUNC(devfn));
+	if (dev == NULL)
+		return (NULL);
+
+	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
+	pdev->devfn = devfn;
+	pdev->vendor = pci_get_vendor(dev);
+	pdev->device = pci_get_device(dev);
+	pdev->dev.bsddev = dev;
+	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
+	pbus->self = pdev;
+	pdev->bus = pbus;
+	pdev->bus->number = pci_get_bus(dev);
+	pdev->bus->domain = pci_get_domain(dev);
+	return (pdev);
+}
+
+int
+linuxkpi_pci_domain_nr(struct pci_bus *pbus)
+{
+
+	return (pci_get_domain(pbus->self->dev.bsddev));
+}
+
 static int
 linux_pci_probe(device_t dev)
 {
@@ -345,6 +377,18 @@ linux_pci_detach_device(struct pci_dev *pdev)
 	put_device(&pdev->dev);
 
 	return (0);
+}
+
+void
+linuxkpi_pci_dev_put(struct pci_dev *pdev)
+{
+	if (pdev == NULL)
+		return;
+
+	MPASS(pdev->bus);
+	MPASS(pdev->bus->self == pdev);
+	free(pdev->bus, M_DEVBUF);
+	free(pdev, M_DEVBUF);
 }
 
 static int
