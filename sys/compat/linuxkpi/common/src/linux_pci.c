@@ -69,6 +69,9 @@ __FBSDID("$FreeBSD$");
 
 #include "backlight_if.h"
 
+/* Undef the linux function macro defined in linux/pci.h */
+#undef pci_get_class
+
 static device_probe_t linux_pci_probe;
 static device_attach_t linux_pci_attach;
 static device_detach_t linux_pci_detach;
@@ -207,6 +210,34 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 	}
 	spin_unlock(&pci_lock);
 	return (NULL);
+}
+
+struct pci_dev *
+linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
+{
+	device_t dev;
+	device_t devfrom = NULL;
+	struct pci_dev *pdev;
+	struct pci_bus *pbus;
+
+	if (from != NULL)
+		devfrom = from->dev.bsddev;
+
+	dev = pci_find_class_from(class >> 16, (class >> 8) & 0xFF, devfrom);
+	if (dev == NULL)
+		return (NULL);
+
+	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
+	pdev->devfn = PCI_DEVFN(pci_get_slot(dev), pci_get_function(dev));
+	pdev->vendor = pci_get_vendor(dev);
+	pdev->device = pci_get_device(dev);
+	pdev->dev.bsddev = dev;
+	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
+	pbus->self = pdev;
+	pdev->bus = pbus;
+	pdev->bus->number = pci_get_bus(dev);
+	pdev->bus->domain = pci_get_domain(dev);
+	return (pdev);
 }
 
 struct pci_dev *
