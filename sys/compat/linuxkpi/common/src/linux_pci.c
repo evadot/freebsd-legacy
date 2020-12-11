@@ -212,13 +212,40 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 	return (NULL);
 }
 
+static void
+linuxkpi_fill_pci_dev(device_t dev, struct pci_dev *pdev)
+{
+
+	pdev->devfn = PCI_DEVFN(pci_get_slot(dev), pci_get_function(dev));
+	pdev->vendor = pci_get_vendor(dev);
+	pdev->device = pci_get_device(dev);
+	pdev->class = pci_get_class(dev);
+	pdev->revision = pci_get_revid(dev);
+	pdev->dev.bsddev = dev;
+	pdev->bus->self = pdev;
+	pdev->bus->number = pci_get_bus(dev);
+	pdev->bus->domain = pci_get_domain(dev);
+}
+
+static struct pci_dev *
+linuxkpi_new_pci_dev(device_t dev)
+{
+	struct pci_dev *pdev;
+	struct pci_bus *pbus;
+
+	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
+	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
+	pdev->bus = pbus;
+	linuxkpi_fill_pci_dev(dev, pdev);
+	return (pdev);
+}
+
 struct pci_dev *
 linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
 {
 	device_t dev;
 	device_t devfrom = NULL;
 	struct pci_dev *pdev;
-	struct pci_bus *pbus;
 
 	if (from != NULL)
 		devfrom = from->dev.bsddev;
@@ -227,16 +254,7 @@ linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
 	if (dev == NULL)
 		return (NULL);
 
-	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
-	pdev->devfn = PCI_DEVFN(pci_get_slot(dev), pci_get_function(dev));
-	pdev->vendor = pci_get_vendor(dev);
-	pdev->device = pci_get_device(dev);
-	pdev->dev.bsddev = dev;
-	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
-	pbus->self = pdev;
-	pdev->bus = pbus;
-	pdev->bus->number = pci_get_bus(dev);
-	pdev->bus->domain = pci_get_domain(dev);
+	pdev = linuxkpi_new_pci_dev(dev);
 	return (pdev);
 }
 
@@ -246,22 +264,12 @@ linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
 {
 	device_t dev;
 	struct pci_dev *pdev;
-	struct pci_bus *pbus;
 
 	dev = pci_find_dbsf(domain, bus, PCI_SLOT(devfn), PCI_FUNC(devfn));
 	if (dev == NULL)
 		return (NULL);
 
-	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
-	pdev->devfn = devfn;
-	pdev->vendor = pci_get_vendor(dev);
-	pdev->device = pci_get_device(dev);
-	pdev->dev.bsddev = dev;
-	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
-	pbus->self = pdev;
-	pdev->bus = pbus;
-	pdev->bus->number = pci_get_bus(dev);
-	pdev->bus->domain = pci_get_domain(dev);
+	pdev = linuxkpi_new_pci_dev(dev);
 	return (pdev);
 }
 
@@ -300,7 +308,6 @@ linux_pci_attach_device(device_t dev, struct pci_driver *pdrv,
     const struct pci_device_id *id, struct pci_dev *pdev)
 {
 	struct resource_list_entry *rle;
-	struct pci_bus *pbus;
 	struct pci_devinfo *dinfo;
 	device_t parent;
 	int error;
@@ -315,16 +322,12 @@ linux_pci_attach_device(device_t dev, struct pci_driver *pdrv,
 		dinfo = device_get_ivars(dev);
 	}
 
+	pdev->bus = malloc(sizeof(*pdev->bus), M_DEVBUF, M_WAITOK | M_ZERO);
+	linuxkpi_fill_pci_dev(dev, pdev);
 	pdev->dev.parent = &linux_root_device;
-	pdev->dev.bsddev = dev;
 	INIT_LIST_HEAD(&pdev->dev.irqents);
-	pdev->devfn = PCI_DEVFN(pci_get_slot(dev), pci_get_function(dev));
-	pdev->device = dinfo->cfg.device;
-	pdev->vendor = dinfo->cfg.vendor;
 	pdev->subsystem_vendor = dinfo->cfg.subvendor;
 	pdev->subsystem_device = dinfo->cfg.subdevice;
-	pdev->class = pci_get_class(dev);
-	pdev->revision = pci_get_revid(dev);
 	pdev->pdrv = pdrv;
 	kobject_init(&pdev->dev.kobj, &linux_dev_ktype);
 	kobject_set_name(&pdev->dev.kobj, device_get_nameunit(dev));
@@ -341,11 +344,6 @@ linux_pci_attach_device(device_t dev, struct pci_driver *pdrv,
 		goto out_dma_init;
 
 	TAILQ_INIT(&pdev->mmio);
-	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK | M_ZERO);
-	pbus->self = pdev;
-	pbus->number = pci_get_bus(dev);
-	pbus->domain = pci_get_domain(dev);
-	pdev->bus = pbus;
 
 	spin_lock(&pci_lock);
 	list_add(&pdev->links, &pci_devices);
