@@ -703,21 +703,21 @@ pci_iounmap(struct pci_dev *dev, void *res)
 }
 
 static inline void
-linux_pci_save_state(struct pci_dev *pdev)
+lkpi_pci_save_state(struct pci_dev *pdev)
 {
 
 	pci_save_state(pdev->dev.bsddev);
 }
 
 static inline void
-linux_pci_restore_state(struct pci_dev *pdev)
+lkpi_pci_restore_state(struct pci_dev *pdev)
 {
 
 	pci_restore_state(pdev->dev.bsddev);
 }
 
-#define pci_save_state(dev)	linux_pci_save_state(dev)
-#define pci_restore_state(dev)	linux_pci_restore_state(dev)
+#define pci_save_state(dev)	lkpi_pci_save_state(dev)
+#define pci_restore_state(dev)	lkpi_pci_restore_state(dev)
 
 #define DEFINE_PCI_DEVICE_TABLE(_table) \
 	const struct pci_device_id _table[] __devinitdata
