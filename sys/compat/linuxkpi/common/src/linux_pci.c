@@ -213,7 +213,7 @@ linux_pci_find(device_t dev, const struct pci_device_id **idp)
 }
 
 static void
-linuxkpi_fill_pci_dev(device_t dev, struct pci_dev *pdev)
+lkpifill_pci_dev(device_t dev, struct pci_dev *pdev)
 {
 
 	pdev->devfn = PCI_DEVFN(pci_get_slot(dev), pci_get_function(dev));
@@ -228,7 +228,7 @@ linuxkpi_fill_pci_dev(device_t dev, struct pci_dev *pdev)
 }
 
 static struct pci_dev *
-linuxkpi_new_pci_dev(device_t dev)
+lkpinew_pci_dev(device_t dev)
 {
 	struct pci_dev *pdev;
 	struct pci_bus *pbus;
@@ -236,7 +236,7 @@ linuxkpi_new_pci_dev(device_t dev)
 	pdev = malloc(sizeof(*pdev), M_DEVBUF, M_WAITOK|M_ZERO);
 	pbus = malloc(sizeof(*pbus), M_DEVBUF, M_WAITOK|M_ZERO);
 	pdev->bus = pbus;
-	linuxkpi_fill_pci_dev(dev, pdev);
+	lkpifill_pci_dev(dev, pdev);
 	return (pdev);
 }
 
@@ -254,7 +254,7 @@ linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
 	if (dev == NULL)
 		return (NULL);
 
-	pdev = linuxkpi_new_pci_dev(dev);
+	pdev = lkpinew_pci_dev(dev);
 	return (pdev);
 }
 
@@ -269,7 +269,7 @@ linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
 	if (dev == NULL)
 		return (NULL);
 
-	pdev = linuxkpi_new_pci_dev(dev);
+	pdev = lkpinew_pci_dev(dev);
 	return (pdev);
 }
 
@@ -323,7 +323,7 @@ linux_pci_attach_device(device_t dev, struct pci_driver *pdrv,
 	}
 
 	pdev->bus = malloc(sizeof(*pdev->bus), M_DEVBUF, M_WAITOK | M_ZERO);
-	linuxkpi_fill_pci_dev(dev, pdev);
+	lkpifill_pci_dev(dev, pdev);
 	pdev->dev.parent = &linux_root_device;
 	INIT_LIST_HEAD(&pdev->dev.irqents);
 	pdev->subsystem_vendor = dinfo->cfg.subvendor;
