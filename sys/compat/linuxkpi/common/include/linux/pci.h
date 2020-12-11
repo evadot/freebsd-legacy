@@ -1082,10 +1082,10 @@ pci_is_root_bus(struct pci_bus *pbus)
 	return (pbus->self == NULL);
 }
 
-struct pci_dev *linuxkpi_pci_get_domain_bus_and_slot(int domain,
+struct pci_dev *lkpi_pci_get_domain_bus_and_slot(int domain,
     unsigned int bus, unsigned int devfn);
 #define	pci_get_domain_bus_and_slot(domain, bus, devfn)	\
-	linuxkpi_pci_get_domain_bus_and_slot(domain, bus, devfn)
+	lkpi_pci_get_domain_bus_and_slot(domain, bus, devfn)
 
 static inline int
 pci_domain_nr(struct pci_bus *pbus)
@@ -1151,7 +1151,7 @@ pci_bus_write_config_word(struct pci_bus *bus, unsigned int devfn, int pos,
 void linuxkpi_pci_dev_put(struct pci_dev *pdev);
 #define	pci_dev_put(pdev)	linuxkpi_pci_dev_put(pdev)
 
-struct pci_dev *linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from);
-#define	pci_get_class(class, from)	linuxkpi_pci_get_class(class, from)
+struct pci_dev *lkpi_pci_get_class(unsigned int class, struct pci_dev *from);
+#define	pci_get_class(class, from)	lkpi_pci_get_class(class, from)
 
 #endif	/* _LINUX_PCI_H_ */

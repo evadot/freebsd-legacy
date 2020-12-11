@@ -241,7 +241,7 @@ lkpinew_pci_dev(device_t dev)
 }
 
 struct pci_dev *
-linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
+lkpi_pci_get_class(unsigned int class, struct pci_dev *from)
 {
 	device_t dev;
 	device_t devfrom = NULL;
@@ -259,7 +259,7 @@ linuxkpi_pci_get_class(unsigned int class, struct pci_dev *from)
 }
 
 struct pci_dev *
-linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
+lkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
     unsigned int devfn)
 {
 	device_t dev;
