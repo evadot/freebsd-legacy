@@ -1082,7 +1082,8 @@ pci_is_root_bus(struct pci_bus *pbus)
 	return (pbus->self == NULL);
 }
 
-struct pci_dev *linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus, unsigned int devfn);
+struct pci_dev *linuxkpi_pci_get_domain_bus_and_slot(int domain,
+    unsigned int bus, unsigned int devfn);
 #define	pci_get_domain_bus_and_slot(domain, bus, devfn)	\
 	linuxkpi_pci_get_domain_bus_and_slot(domain, bus, devfn)
 
