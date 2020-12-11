@@ -401,18 +401,6 @@ linux_pci_detach_device(struct pci_dev *pdev)
 	return (0);
 }
 
-void
-linuxkpi_pci_dev_put(struct pci_dev *pdev)
-{
-	if (pdev == NULL)
-		return;
-
-	MPASS(pdev->bus);
-	MPASS(pdev->bus->self == pdev);
-	free(pdev->bus, M_DEVBUF);
-	free(pdev, M_DEVBUF);
-}
-
 static int
 linux_pci_suspend(device_t dev)
 {

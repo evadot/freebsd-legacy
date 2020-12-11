@@ -1148,9 +1148,6 @@ pci_bus_write_config_word(struct pci_bus *bus, unsigned int devfn, int pos,
 	return (pci_bus_write_config(bus, devfn, pos, val, 2));
 }
 
-void linuxkpi_pci_dev_put(struct pci_dev *pdev);
-#define	pci_dev_put(pdev)	linuxkpi_pci_dev_put(pdev)
-
 struct pci_dev *lkpi_pci_get_class(unsigned int class, struct pci_dev *from);
 #define	pci_get_class(class, from)	lkpi_pci_get_class(class, from)
 
