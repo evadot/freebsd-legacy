@@ -1087,8 +1087,12 @@ struct pci_dev *linuxkpi_pci_get_domain_bus_and_slot(int domain,
 #define	pci_get_domain_bus_and_slot(domain, bus, devfn)	\
 	linuxkpi_pci_get_domain_bus_and_slot(domain, bus, devfn)
 
-int linuxkpi_pci_domain_nr(struct pci_bus *bus);
-#define	pci_domain_nr(bus)	linuxkpi_pci_domain_nr(bus)
+static inline int
+pci_domain_nr(struct pci_bus *pbus)
+{
+
+	return (pci_get_domain(pbus->self->dev.bsddev));
+}
 
 static inline int
 pci_bus_read_config(struct pci_bus *bus, unsigned int devfn,

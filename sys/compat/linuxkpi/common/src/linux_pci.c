@@ -265,13 +265,6 @@ linuxkpi_pci_get_domain_bus_and_slot(int domain, unsigned int bus,
 	return (pdev);
 }
 
-int
-linuxkpi_pci_domain_nr(struct pci_bus *pbus)
-{
-
-	return (pci_get_domain(pbus->self->dev.bsddev));
-}
-
 static int
 linux_pci_probe(device_t dev)
 {
