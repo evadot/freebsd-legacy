@@ -1111,13 +1111,23 @@ pci_bus_read_config(struct pci_bus *bus, unsigned int devfn,
 static inline int
 pci_bus_read_config_word(struct pci_bus *bus, unsigned int devfn, int pos, u16 *val)
 {
-	return (pci_bus_read_config(bus, devfn, pos, (uint32_t *)val, 2));
+	uint32_t tmp;
+	int ret;
+
+	ret = pci_bus_read_config(bus, devfn, pos, &tmp, 2);
+	*val = (u16)tmp;
+	return (ret);
 }
 
 static inline int
 pci_bus_read_config_byte(struct pci_bus *bus, unsigned int devfn, int pos, u8 *val)
 {
-	return (pci_bus_read_config(bus, devfn, pos, (uint32_t *)val, 1));
+	uint32_t tmp;
+	int ret;
+
+	ret = pci_bus_read_config(bus, devfn, pos, &tmp, 1);
+	*val = (u8)tmp;
+	return (ret);
 }
 
 static inline int
