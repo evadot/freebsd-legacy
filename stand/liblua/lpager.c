@@ -1,6 +1,5 @@
 /*-
- * Copyright (c) 1991, 1993, 1994
- *	The Regents of the University of California.  All rights reserved.
+ * Copyright (c) 2020 Kyle Evans <kevans@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,14 +9,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -27,36 +23,67 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)util.c	8.3 (Berkeley) 4/2/94";
-#endif
-#endif /* not lint */
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <lua.h>
+#include "lauxlib.h"
 
-#include <err.h>
-#include <unistd.h>
+/* Open the pager.  No arguments, no return value. */
+static int
+lpager_open(lua_State *L)
+{
 
-#include "stty.h"
-#include "extern.h"
+	pager_open();
+	return (0);
+}
 
 /*
- * Gross, but since we're changing the control descriptor from 1 to 0, most
- * users will be probably be doing "stty > /dev/sometty" by accident.  If 1
- * and 2 are both ttys, but not the same, assume that 1 was incorrectly
- * redirected.
+ * Output to the pager.  All arguments are interpreted as strings and passed to
+ * pager_output().  No return value.
  */
-void
-checkredirect(void)
+static int
+lpager_output(lua_State *L)
 {
-	struct stat sb1, sb2;
+	const char *outstr;
+	int i;
 
-	if (isatty(STDOUT_FILENO) && isatty(STDERR_FILENO) &&
-	    !fstat(STDOUT_FILENO, &sb1) && !fstat(STDERR_FILENO, &sb2) &&
-	    (sb1.st_rdev != sb2.st_rdev))
-warnx("stdout appears redirected, but stdin is the control descriptor");
+	for (i = 1; i <= lua_gettop(L); i++) {
+		outstr = luaL_tolstring(L,  i, NULL);
+		pager_output(outstr);
+		lua_pop(L, -1);
+	}
+
+	return (0);
+}
+
+/* Output to the pager from a file.  Takes a filename, no return value. */
+static int
+lpager_file(lua_State *L)
+{
+
+	return (pager_file(luaL_checkstring(L, 1)));
+}
+
+static int
+lpager_close(lua_State *L)
+{
+
+	pager_close();
+	return (0);
+}
+
+static const struct luaL_Reg pagerlib[] = {
+	{ "open", lpager_open },
+	{ "output", lpager_output },
+	{ "file", lpager_file },
+	{ "close", lpager_close },
+	{ NULL, NULL },
+};
+
+int
+luaopen_pager(lua_State *L)
+{
+	luaL_newlib(L, pagerlib);
+	return 1;
 }

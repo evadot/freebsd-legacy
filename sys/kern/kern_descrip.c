@@ -2766,7 +2766,7 @@ closef(struct file *fp, struct thread *td)
 			FILEDESC_XUNLOCK(fdp);
 		}
 	}
-	return (fdrop(fp, td));
+	return (fdrop_close(fp, td));
 }
 
 /*
@@ -3021,13 +3021,6 @@ fget_unlocked_seq(struct filedesc *fdp, int fd, cap_rights_t *needrightsp,
 			return (error);
 #endif
 		if (__predict_false(!refcount_acquire_if_not_zero(&fp->f_count))) {
-			/*
-			 * The count was found either saturated or zero.
-			 * This re-read is not any more racy than using the
-			 * return value from fcmpset.
-			 */
-			if (refcount_load(&fp->f_count) != 0)
-				return (EBADF);
 			/*
 			 * Force a reload. Other thread could reallocate the
 			 * table before this fd was closed, so it is possible
