@@ -30,6 +30,7 @@
 
 .include <src.opts.mk>
 
+PACKAGE=	zoneinfo
 CLEANFILES+=	yearistype
 CLEANDIRS+=	builddir
 CONTRIBDIR=	${SRCTOP}/contrib/tzdata/
