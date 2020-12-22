@@ -97,10 +97,10 @@ struct pci_device_id {
 #define	PCI_DEVICE_ID_MELLANOX_SINAI		0x6274
 #define	PCI_SUBDEVICE_ID_QEMU		0x1100
 
-#define PCI_DEVFN(slot, func)   ((((slot) & 0x1f) << 8) | (func))
-#define PCI_SLOT(devfn)		(((devfn) >> 8) & 0x1f)
-#define PCI_FUNC(devfn)		((devfn) & 0xff)
-#define	PCI_BUS_NUM(devfn)	(((devfn) >> 16) & 0xff)
+#define PCI_DEVFN(slot, func)   ((((slot) & 0x1f) << 3) | (func))
+#define PCI_SLOT(devfn)		(((devfn) >> 3) & 0x1f)
+#define PCI_FUNC(devfn)		((devfn) & 0x07)
+#define	PCI_BUS_NUM(devfn)	(((devfn) >> 8) & 0xff)
 
 #define PCI_VDEVICE(_vendor, _device)					\
 	    .vendor = PCI_VENDOR_ID_##_vendor, .device = (_device),	\
@@ -1098,13 +1098,8 @@ static inline int
 pci_bus_read_config(struct pci_bus *bus, unsigned int devfn,
                     int pos, uint32_t *val, int len)
 {
-	device_t dev;
 
-	dev = pci_find_dbsf(pci_get_domain(bus->self->dev.bsddev),
-	    pci_get_bus(bus->self->dev.bsddev),
-	    PCI_SLOT(devfn),
-	    PCI_FUNC(devfn));
-	*val = pci_read_config(dev, pos, len);
+	*val = pci_read_config(bus->self->dev.bsddev, pos, len);
 	return (0);
 }
 
@@ -1134,13 +1129,8 @@ static inline int
 pci_bus_write_config(struct pci_bus *bus, unsigned int devfn, int pos,
     uint32_t val, int size)
 {
-	device_t dev;
 
-	dev = pci_find_dbsf(pci_get_domain(bus->self->dev.bsddev),
-	    pci_get_bus(bus->self->dev.bsddev),
-	    PCI_SLOT(devfn),
-	    PCI_FUNC(devfn));
-	pci_write_config(dev, pos, val, size);
+	pci_write_config(bus->self->dev.bsddev, pos, val, size);
 	return (0);
 }
 
